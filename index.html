@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>麻雀牌効率 やぎちゃんシミュレーター v16.35</title>
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;max-width:860px;margin:0 auto;padding:16px;line-height:1.5;background:#f0f2f5}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+h2{margin-top:0;color:#1a1a1a;border-left:4px solid #111;padding-left:10px}
+.row{display:flex;gap:10px;margin-bottom:12px}
+.col{flex:1}
+input,select,button{width:100%;box-sizing:border-box;padding:12px;margin-top:6px;font-size:16px;border-radius:8px;border:1px solid #ccc}
+button{background:#111;color:#fff;font-weight:700;cursor:pointer;border:none;margin-top:12px}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab{flex:1;padding:12px;border-radius:8px;text-align:center;cursor:pointer;background:#e4e6eb;font-weight:700}
+.tab.active{background:#111;color:#fff}
+.label{font-size:14px;font-weight:700;color:#555}
+.draw-group{margin-bottom:16px;padding:12px;background:#eef2f7;border-radius:8px;border:2px dashed #bcc6d2;min-height:50px;display:flex;flex-wrap:wrap}
+.draw-btn{padding:6px 8px;margin:2px;background:#fff;border:1px solid #ccc;border-radius:6px;cursor:pointer;font-size:13px;min-width:38px;text-align:center}
+.draw-btn.effective{border:2px solid #d93025;color:#d93025;font-weight:bold;background:#fff1f0}
+.recommend-item{margin-bottom:12px;padding:12px;background:#f8f9fa;border-left:5px solid #d93025;border-radius:4px}
+.agari-card{background:#d93025;color:#fff;padding:30px;border-radius:12px;text-align:center;font-size:28px;font-weight:bold;margin-bottom:15px;box-shadow:0 4px 15px rgba(217,48,37,0.4)}
+.machi-info{color:#d93025;font-weight:700;margin-top:4px;display:block;font-size:14px}
+#advice-area{background:#fff9db;border:2px solid #fab005;padding:15px;border-radius:8px;margin-bottom:15px; color: #856404; font-size: 15px; font-weight: bold;}
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<h2>麻雀牌効率 やぎちゃんシミュレーター v16.35</h2>
+<div id="advice-area">解析中...</div>
+
+<div id="agari-display" class="hidden"></div>
+
+<div class="card">
+    <div class="row">
+        <div class="col"><div class="label">場風</div><select id="bakaze"><option value="27">東</option><option value="28">南</option></select></div>
+        <div class="col"><div class="label">自風</div><select id="jikaze"><option value="27">東</option><option value="28">南</option><option value="29">西</option><option value="30">北</option></select></div>
+        <div class="col"><div class="label">ドラ表示牌</div><input id="dora" value="1z" maxlength="2" /></div>
+    </div>
+    <div class="label">手牌</div>
+    <input id="hand" value="456777m11189p345s" />
+    <button onclick="analyze()">解析を実行</button>
+</div>
+
+<div class="card">
+    <div class="label">仮想ドロー（ツモ牌を入れ替え）</div>
+    <div class="draw-group" id="eff-draws"></div>
+</div>
+
+<div class="tabs">
+    <div id="btn-mentu" class="tab active" onclick="setTab('mentu')">メンツ手</div>
+    <div id="btn-chiitoi" class="tab" onclick="setTab('chiitoi')">七対子</div>
+</div>
+
+<div id="result-container">
+    <div id="mentu" class="card"></div>
+    <div id="chiitoi" class="card hidden"></div>
+</div>
+
+<script>
+let currentHandArray = Array(34).fill(0);
+
+function setTab(t){
+    ['mentu','chiitoi'].forEach(x=>document.getElementById(x).classList.add('hidden'));
+    document.getElementById(t).classList.remove('hidden');
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.getElementById('btn-'+t).classList.add('active');
+}
+
+function parseHand(str){
+    const c=Array(34).fill(0);
+    const g=str.match(/(\d+)([mpsz])/g)||[];
+    for(const x of g){
+        const n=x.slice(0,-1),s=x.slice(-1);
+        const b=s==='m'?0:s==='p'?9:s==='s'?18:27;
+        for(const ch of n) {
+            const idx = b+Number(ch)-1;
+            if(idx>=0 && idx < 34) c[idx]++;
+        }
+    }
+    return c;
+}
+
+function tileName(i){if(i<9)return(i+1)+'m';if(i<18)return(i-8)+'p';if(i<27)return(i-17)+'s';return(i-26)+'z';}
+
+function calcChiitoiShanten(c){
+    let pairs = 0;
+    let kinds = 0;
+    for(let i=0;i<34;i++){
+        if(c[i] > 0) kinds++;
+        if(c[i] >= 2) pairs++;
+    }
+    return Math.max(0, 6 - pairs + Math.max(0, 7 - kinds));
+}
+
+function calcMentsuShanten(c){
+    let best = 8;
+    function dfs(a, idx, m, p, t){
+        while(idx < 34 && a[idx] === 0) idx++;
+        if(idx >= 34){
+            if(t > 4 - m) t = 4 - m;
+            const sh = 8 - m*2 - t - p;
+            if(sh < best) best = sh;
+            return;
+        }
+        if(m > 4 || p > 1) return;
+
+        if(a[idx] >= 3){ a[idx]-=3; dfs(a, idx, m+1, p, t); a[idx]+=3; }
+        if(idx < 27 && idx%9 <= 6 && a[idx+1] && a[idx+2]){ a[idx]--;a[idx+1]--;a[idx+2]--; dfs(a, idx, m+1, p, t); a[idx]++;a[idx+1]++;a[idx+2]++; }
+        if(p === 0 && a[idx] >= 2){ a[idx]-=2; dfs(a, idx, m, p+1, t); a[idx]+=2; }
+        if(t < 4-m && a[idx] >= 2){ a[idx]-=2; dfs(a, idx, m, p, t+1); a[idx]+=2; }
+        if(t < 4-m && idx < 27 && idx%9 <= 7 && a[idx+1]){ a[idx]--;a[idx+1]--; dfs(a, idx, m, p, t+1); a[idx]++;a[idx+1]++; }
+        if(t < 4-m && idx < 27 && idx%9 <= 6 && a[idx+2]){ a[idx]--;a[idx+2]--; dfs(a, idx, m, p, t+1); a[idx]++;a[idx+2]++; }
+
+        dfs(a, idx+1, m, p, t);
+    }
+    dfs(c.slice(), 0, 0, 0, 0);
+    return Math.max(-1, best);
+}
+
+function effectiveTiles(c, target){
+    const out = [];
+    for(let i=0;i<34;i++){
+        if(c[i] >= 4) continue;
+        c[i]++;
+        const next = target === 'chiitoi' ? calcChiitoiShanten(c) : calcMentsuShanten(c);
+        c[i]--;
+        if(next < (target === 'chiitoi' ? calcChiitoiShanten(c) : calcMentsuShanten(c))) out.push(i);
+    }
+    return out;
+}
+
+function analyze(){
+    const hand = document.getElementById('hand').value.trim();
+    currentHandArray = parseHand(hand);
+
+    const mShanten = calcMentsuShanten(currentHandArray.slice());
+    const cShanten = calcChiitoiShanten(currentHandArray.slice());
+
+    document.getElementById('mentu').innerHTML = `<div class="recommend-item">メンツ手シャンテン数: <b>${mShanten}</b></div>`;
+    document.getElementById('chiitoi').innerHTML = `<div class="recommend-item">七対子シャンテン数: <b>${cShanten}</b></div>`;
+
+    const active = document.getElementById('btn-chiitoi').classList.contains('active') ? 'chiitoi' : 'mentu';
+    const e = effectiveTiles(currentHandArray.slice(), active);
+    document.getElementById('eff-draws').innerHTML = e.length
+        ? e.map(i => `<span class="draw-btn effective">${tileName(i)}</span>`).join('')
+        : '<span class="draw-btn">有効牌なし</span>';
+
+    if(mShanten === -1 || cShanten === 0){
+        document.getElementById('advice-area').textContent = '和了形です。';
+    } else {
+        document.getElementById('advice-area').textContent = `メンツ手 ${mShanten} シャンテン / 七対子 ${cShanten} シャンテン`;
+    }
+}
+
+analyze();
+</script>
+</body>
+</html>
