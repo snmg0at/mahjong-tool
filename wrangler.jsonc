@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mahjong-tool",
+  "main": "build/server/index.js",
+  "compatibility_date": "2026-05-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "build/client"
+  },
+  "vars": {
+    "APP_NAME": "Mahjong Tool"
+  }
+}
