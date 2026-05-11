@@ -1,9 +1,14 @@
-# Mahjong Tool - Cloudflare React Router Template
+# Mahjong Tool
 
-Cloudflare 公式ドキュメント（React Router ガイド）を参考にした最小テンプレートです。
+Cloudflare Workers + React Router で動く麻雀ツールです。
 
 ## セットアップ
 
 ```bash
 npm install
 npm run dev
+npm run build
+npm run deploy
+
+貼り付け後は `Commit changes...` で `main` に保存してください。  
+これで再ビルドが走ります。
