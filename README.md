@@ -7,10 +7,3 @@ Cloudflare 公式ドキュメント（React Router ガイド）を参考にし�
 ```bash
 npm install
 npm run dev
-```
-
-## デプロイ
-
-```bash
-npm run deploy
-```
