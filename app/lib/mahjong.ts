@@ -184,6 +184,7 @@ export function evaluatePathWeight(hand: Tile[]) {
   return { wm, wc };
 }
 
+
 export function tileFileName(tile: Tile) {
   if (tile <= 8) return `${tile + 1}m.svg`;
   if (tile <= 17) return `${tile - 8}p.svg`;
@@ -194,4 +195,5 @@ export function tileFileName(tile: Tile) {
 
 export function tileImagePath(tile: Tile) {
   return `/tiles/Regular/${tileFileName(tile)}`;
+
 }

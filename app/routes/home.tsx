@@ -8,7 +8,9 @@ import {
   shantenMentsu,
   sortTiles,
   TILE_LABELS,
+
   tileImagePath,
+
   type Tile,
   type UkeireResult,
 } from "../lib/mahjong";
@@ -32,9 +34,11 @@ function createGame() {
 }
 
 export default function Home() {
+
   const initial = createGame();
   const [wall, setWall] = useState<Tile[]>(initial.wall);
   const [hand, setHand] = useState<Tile[]>(initial.hand);
+
   const [river, setRiver] = useState<Tile[]>([]);
   const [turn, setTurn] = useState(1);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
@@ -45,7 +49,9 @@ export default function Home() {
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, score: 0, goodMoves: 0, totalMoves: 0, totalThinkMs: 0, totalWinTurn: 0 });
 
   useEffect(() => {
+
     const id = setInterval(() => setThinkMs(Date.now() - thinkingFrom), 100);
+
     return () => clearInterval(id);
   }, [thinkingFrom]);
 
@@ -62,6 +68,7 @@ export default function Home() {
     setSelectedUke(null);
     setThinkingFrom(Date.now());
     setThinkMs(0);
+
     setStats((s) => ({ ...s, totalGames: s.totalGames + 1, wins: s.wins + (win ? 1 : 0), totalWinTurn: s.totalWinTurn + (win ? turn : 0) }));
   }
 
@@ -70,6 +77,7 @@ export default function Home() {
     const bc = shantenChiitoi(before);
     const am = shantenMentsu(after13);
     const ac = shantenChiitoi(after13);
+
     const { wm, wc } = evaluatePathWeight(before);
     const delta = wm * (-am) + wc * (-ac) - (wm * (-bm) + wc * (-bc));
 
@@ -98,15 +106,19 @@ export default function Home() {
     }
 
     const nextWall = [...wall];
+
     const draw = nextWall.pop();
     if (draw == null) {
+
       startNextGame(false);
       return;
     }
 
     setRiver((r) => r);
     setWall(nextWall);
+
     setHand([...after13, draw].sort(sortTiles));
+
     setTurn((v) => v + 1);
     setSelectedIdx(null);
     setSelectedUke(null);
@@ -125,6 +137,7 @@ export default function Home() {
     const after13 = handWithoutIndex(hand, idx).sort(sortTiles);
     evaluateMove(hand, after13, Date.now() - thinkingFrom);
     setRiver((r) => [...r, discard]);
+
     drawIfNeeded(after13);
   }
 
@@ -150,6 +163,7 @@ export default function Home() {
         <Stat label="勝利/総数" value={`${stats.wins}/${stats.totalGames}`} />
       </section>
 
+
       {selectedUke && selectedIdx != null && (
         <div style={{ padding: 10, border: "1px solid #2b7056", borderRadius: 8, marginBottom: 12, background: "#00552e" }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>仮選択牌: {TILE_LABELS[hand[selectedIdx]]}</div>
@@ -159,6 +173,7 @@ export default function Home() {
         </div>
       )}
 
+
       <div style={{ marginBottom: 10, fontWeight: 700 }}>河（6枚ずつ）</div>
       <River river={river} />
 
@@ -166,6 +181,7 @@ export default function Home() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {hand.map((t, i) => {
           const selected = i === selectedIdx;
+
           return (
             <button
               key={`${t}-${i}`}
@@ -184,6 +200,7 @@ export default function Home() {
               <img src={tileImagePath(t)} alt={TILE_LABELS[t]} width={44} height={60} style={{ display: "block", pointerEvents: "none" }} onError={(e) => { (e.currentTarget.style.display = "none"); const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = "inline"; }} /><span style={{ display: "none" }}>{TILE_LABELS[t]}</span>
             </button>
           );
+
         })}
       </div>
     </main>
@@ -191,12 +208,15 @@ export default function Home() {
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
+
   return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 8, background: "#00552e" }}><div style={{ fontSize: 12, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 18, color: "#f5f5f5" }}>{value}</div></div>;
+
 }
 
 function River({ river }: { river: Tile[] }) {
   const rows: Tile[][] = [];
   for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6));
+
   return (
     <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 8, minHeight: 64, marginBottom: 8, background: "#00552e" }}>
       {rows.length === 0 ? (
@@ -214,4 +234,5 @@ function River({ river }: { river: Tile[] }) {
       )}
     </div>
   );
+
 }
