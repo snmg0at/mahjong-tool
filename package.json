@@ -5,13 +5,15 @@
   "scripts": {
     "dev": "react-router dev",
     "build": "REACT_ROUTER_BUILD_DIRECTORY=build react-router build",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "test": "node --test app/lib/mahjong.test.ts"
   },
   "dependencies": {
     "@react-router/cloudflare": "^7.15.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router": "^7.0.0"
+    "react-router": "^7.0.0",
+    "@react-router/node": "^7.15.0"
   },
   "devDependencies": {
     "@react-router/dev": "^7.15.0",
