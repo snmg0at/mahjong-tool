@@ -1,3 +1,4 @@
+BUILD_MARKER_MAIN_2026_05_12
 import { useMemo, useState } from "react";
 
 type SimResult = { i: number; tiles: number; score: number; shanten: number; machi: { name: string; count: number }[] };
