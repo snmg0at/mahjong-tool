@@ -8,7 +8,9 @@ import {
   shantenMentsu,
   sortTiles,
   TILE_LABELS,
-  tileImageSrc,
+
+  tileImagePath,
+
   type Tile,
   type UkeireResult,
 } from "../lib/mahjong";
@@ -25,16 +27,18 @@ type Stats = {
   totalWinTurn: number;
 };
 
+function createGame() {
+  const w = makeWall();
+  const h = w.splice(w.length - 14, 14).sort(sortTiles);
+  return { wall: w, hand: h };
+}
+
 export default function Home() {
-  const [wall, setWall] = useState<Tile[]>(() => {
-    const w = makeWall();
-    w.splice(w.length - 14, 14);
-    return w;
-  });
-  const [hand, setHand] = useState<Tile[]>(() => {
-    const w = makeWall();
-    return w.splice(w.length - 14, 14).sort(sortTiles);
-  });
+
+  const initial = createGame();
+  const [wall, setWall] = useState<Tile[]>(initial.wall);
+  const [hand, setHand] = useState<Tile[]>(initial.hand);
+
   const [river, setRiver] = useState<Tile[]>([]);
   const [turn, setTurn] = useState(1);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
@@ -45,9 +49,9 @@ export default function Home() {
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, score: 0, goodMoves: 0, totalMoves: 0, totalThinkMs: 0, totalWinTurn: 0 });
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setThinkMs(Date.now() - thinkingFrom);
-    }, 100);
+
+    const id = setInterval(() => setThinkMs(Date.now() - thinkingFrom), 100);
+
     return () => clearInterval(id);
   }, [thinkingFrom]);
 
@@ -55,10 +59,9 @@ export default function Home() {
   const shantenC = useMemo(() => shantenChiitoi(hand), [hand]);
 
   function startNextGame(win: boolean) {
-    const w = makeWall();
-    const h = w.splice(w.length - 14, 14).sort(sortTiles);
-    setWall(w);
-    setHand(h);
+    const next = createGame();
+    setWall(next.wall);
+    setHand(next.hand);
     setRiver([]);
     setTurn(1);
     setSelectedIdx(null);
@@ -97,21 +100,25 @@ export default function Home() {
       startNextGame(true);
       return;
     }
-
     if (turn >= MAX_TURNS || wall.length === 0) {
       startNextGame(false);
       return;
     }
 
     const nextWall = [...wall];
-    const t = nextWall.pop();
-    if (t == null) {
+
+    const draw = nextWall.pop();
+    if (draw == null) {
+
       startNextGame(false);
       return;
     }
 
+    setRiver((r) => r);
     setWall(nextWall);
-    setHand([...after13, t].sort(sortTiles));
+
+    setHand([...after13, draw].sort(sortTiles));
+
     setTurn((v) => v + 1);
     setSelectedIdx(null);
     setSelectedUke(null);
@@ -130,7 +137,7 @@ export default function Home() {
     const after13 = handWithoutIndex(hand, idx).sort(sortTiles);
     evaluateMove(hand, after13, Date.now() - thinkingFrom);
     setRiver((r) => [...r, discard]);
-    setHand(after13);
+
     drawIfNeeded(after13);
   }
 
@@ -156,7 +163,16 @@ export default function Home() {
         <Stat label="勝利/総数" value={`${stats.wins}/${stats.totalGames}`} />
       </section>
 
-      {selectedUke && selectedIdx != null && <div style={{ padding: 10, border: "1px solid #2b7056", borderRadius: 8, marginBottom: 12, background: "#0d3d2e" }}><div style={{ fontWeight: 700, marginBottom: 4 }}>仮選択牌: {TILE_LABELS[hand[selectedIdx]]}</div><div>メンツ手受け入れ: {selectedUke.mentsuKinds}種 {selectedUke.mentsuCount}枚</div><div>七対子受け入れ: {selectedUke.chiitoiKinds}種 {selectedUke.chiitoiCount}枚</div><div style={{ color: "#bbe7d5", marginTop: 4 }}>同じ牌をもう一度クリックで打牌確定</div></div>}
+
+      {selectedUke && selectedIdx != null && (
+        <div style={{ padding: 10, border: "1px solid #2b7056", borderRadius: 8, marginBottom: 12, background: "#00552e" }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>仮選択牌: {TILE_LABELS[hand[selectedIdx]]}</div>
+          <div>メンツ手受け入れ: {selectedUke.mentsuKinds}種 {selectedUke.mentsuCount}枚</div>
+          <div>七対子受け入れ: {selectedUke.chiitoiKinds}種 {selectedUke.chiitoiCount}枚</div>
+          <div style={{ color: "#bbe7d5", marginTop: 4 }}>同じ牌をもう一度クリックで打牌確定</div>
+        </div>
+      )}
+
 
       <div style={{ marginBottom: 10, fontWeight: 700 }}>河（6枚ずつ）</div>
       <River river={river} />
@@ -165,7 +181,26 @@ export default function Home() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {hand.map((t, i) => {
           const selected = i === selectedIdx;
-          return <button key={`${t}-${i}`} onClick={() => onTileClick(i)} style={{ borderRadius: 8, border: selected ? "2px solid #6cc9ff" : "1px solid #2b7056", background: selected ? "#1f5f47" : "#13523d", cursor: "pointer", padding: 2 }}><img src={tileImageSrc(t)} alt={TILE_LABELS[t]} width={42} height={58} /></button>;
+
+          return (
+            <button
+              key={`${t}-${i}`}
+              onClick={() => onTileClick(i)}
+              style={{
+                minWidth: 48,
+                padding: "10px 8px",
+                borderRadius: 8,
+                border: selected ? "2px solid #6cc9ff" : "1px solid #2b7056",
+                background: selected ? "#1f5f47" : "#13523d",
+                color: "#fff",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              <img src={tileImagePath(t)} alt={TILE_LABELS[t]} width={44} height={60} style={{ display: "block", pointerEvents: "none" }} onError={(e) => { (e.currentTarget.style.display = "none"); const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = "inline"; }} /><span style={{ display: "none" }}>{TILE_LABELS[t]}</span>
+            </button>
+          );
+
         })}
       </div>
     </main>
@@ -173,11 +208,31 @@ export default function Home() {
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 8, background: "#0d3d2e" }}><div style={{ fontSize: 12, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 18, color: "#f5f5f5" }}>{value}</div></div>;
+
+  return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 8, background: "#00552e" }}><div style={{ fontSize: 12, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 18, color: "#f5f5f5" }}>{value}</div></div>;
+
 }
 
 function River({ river }: { river: Tile[] }) {
   const rows: Tile[][] = [];
   for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6));
-  return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 8, minHeight: 64, marginBottom: 8, background: "#0d3d2e" }}>{rows.length === 0 ? <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div> : rows.map((row, rIdx) => <div key={rIdx} style={{ display: "flex", gap: 6, marginBottom: 6 }}>{row.map((t, i) => <img key={`${rIdx}-${i}`} src={tileImageSrc(t)} alt={TILE_LABELS[t]} width={32} height={44} />)}</div>)}</div>;
+
+  return (
+    <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 8, minHeight: 64, marginBottom: 8, background: "#00552e" }}>
+      {rows.length === 0 ? (
+        <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div>
+      ) : (
+        rows.map((row, rIdx) => (
+          <div key={rIdx} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+            {row.map((t, i) => (
+              <span key={`${rIdx}-${i}`} style={{ border: "1px solid #95d9bf", borderRadius: 4, padding: "4px 6px", background: "#184f3b" }}>
+                <img src={tileImagePath(t)} alt={TILE_LABELS[t]} width={44} height={60} style={{ display: "block", pointerEvents: "none" }} onError={(e) => { (e.currentTarget.style.display = "none"); const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = "inline"; }} /><span style={{ display: "none" }}>{TILE_LABELS[t]}</span>
+              </span>
+            ))}
+          </div>
+        ))
+      )}
+    </div>
+  );
+
 }
