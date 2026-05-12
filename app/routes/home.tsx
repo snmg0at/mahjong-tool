@@ -197,7 +197,7 @@ export default function Home() {
                 cursor: "pointer",
               }}
             >
-              <img src={tileImagePath(t)} alt={TILE_LABELS[t]} width={44} height={60} style={{ display: "block", pointerEvents: "none" }} onError={(e) => { (e.currentTarget.style.display = "none"); const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = "inline"; }} /><span style={{ display: "none" }}>{TILE_LABELS[t]}</span>
+              <TileFace tile={t} />
             </button>
           );
 
@@ -213,6 +213,27 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 }
 
+
+function TileFace({ tile }: { tile: Tile }) {
+  return (
+    <span style={{ display: "inline-flex", width: 44, height: 60, borderRadius: 6, border: "1px solid #95d9bf", background: "#f4f4f4", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+      <img
+        src={tileImagePath(tile)}
+        alt={TILE_LABELS[tile]}
+        width={44}
+        height={60}
+        style={{ display: "block", pointerEvents: "none", objectFit: "cover" }}
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+          const next = e.currentTarget.nextElementSibling as HTMLElement | null;
+          if (next) next.style.display = "inline";
+        }}
+      />
+      <span style={{ display: "none", color: "#102218", fontSize: 12, fontWeight: 700 }}>{TILE_LABELS[tile]}</span>
+    </span>
+  );
+}
+
 function River({ river }: { river: Tile[] }) {
   const rows: Tile[][] = [];
   for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6));
@@ -226,7 +247,7 @@ function River({ river }: { river: Tile[] }) {
           <div key={rIdx} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
             {row.map((t, i) => (
               <span key={`${rIdx}-${i}`} style={{ border: "1px solid #95d9bf", borderRadius: 4, padding: "4px 6px", background: "#184f3b" }}>
-                <img src={tileImagePath(t)} alt={TILE_LABELS[t]} width={44} height={60} style={{ display: "block", pointerEvents: "none" }} onError={(e) => { (e.currentTarget.style.display = "none"); const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = "inline"; }} /><span style={{ display: "none" }}>{TILE_LABELS[t]}</span>
+                <TileFace tile={t} />
               </span>
             ))}
           </div>
