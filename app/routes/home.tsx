@@ -124,14 +124,7 @@ export default function Home() {
         {resultMsg ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "100%" }}>
             <div style={{ fontWeight: 700, color: "#ffe082", fontSize: 20 }}>{resultMsg}</div>
-            {gameEnded && (
-              <button
-                onClick={() => startNextGame(resultMsg === "和了")}
-                style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: "#6cc9ff", color: "#023", fontWeight: 700, cursor: "pointer" }}
-              >
-                New Game
-              </button>
-            )}
+            {gameEnded && <button onClick={() => startNextGame(resultMsg === "和了")} style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: "#6cc9ff", color: "#023", fontWeight: 700, cursor: "pointer" }}>New Game</button>}
           </div>
         ) : (
           <>
@@ -191,12 +184,7 @@ export default function Home() {
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 6, background: "#00552e" }}>
-      <div style={{ fontSize: 11, color: "#bbe7d5" }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 16, color: "#f5f5f5" }}>{value}</div>
-    </div>
-  );
+  return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 6, background: "#00552e" }}><div style={{ fontSize: 11, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 16, color: "#f5f5f5" }}>{value}</div></div>;
 }
 
 function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: boolean }) {
