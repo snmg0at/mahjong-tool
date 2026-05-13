@@ -186,14 +186,15 @@ export function evaluatePathWeight(hand: Tile[]) {
 
 
 export function tileFileName(tile: Tile) {
-  if (tile <= 8) return `${tile + 1}m.svg`;
-  if (tile <= 17) return `${tile - 8}p.svg`;
-  if (tile <= 26) return `${tile - 17}s.svg`;
-  const honors = ["east.svg", "south.svg", "west.svg", "north.svg", "haku.svg", "hatsu.svg", "chun.svg"];
+  if (tile <= 8) return `${tile + 1}m.jpg`;
+  if (tile <= 17) return `${tile - 8}p.jpg`;
+  if (tile <= 26) return `${tile - 17}s.jpg`;
+  const honors = ["east.jpg", "south.jpg", "west.jpg", "north.jpg", "white.jpg", "green.jpg", "red.jpg"];
   return honors[tile - 27];
 }
 
 export function tileImagePath(tile: Tile) {
-  return `/tiles/Regular/${tileFileName(tile)}`;
-
+  const base = (typeof import.meta !== "undefined" && (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL) || "/";
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  return `${normalizedBase}tiles/Regular/${tileFileName(tile)}`;
 }
