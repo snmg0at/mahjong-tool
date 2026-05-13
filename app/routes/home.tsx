@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   calcUkeireForDiscard,
   handWithoutIndex,
@@ -52,7 +52,6 @@ export default function Home() {
   const shantenC = useMemo(() => shantenChiitoi(fullHand), [fullHand]);
   const goodRate = stats.totalMoves ? Math.round((stats.goodMoves / stats.totalMoves) * 100) : 0;
 
-
   useEffect(() => {
     if (gameEnded) return;
     if (fullHand.length !== 14) return;
@@ -61,8 +60,6 @@ export default function Home() {
     setGameEnded(true);
     setStats((s) => ({ ...s, totalGames: s.totalGames + 1, wins: s.wins + 1 }));
   }, [fullHand, gameEnded]);
-=======
->>>>>>> main
 
   function startNextGame(win: boolean) {
     const next = createGame();
@@ -79,14 +76,6 @@ export default function Home() {
   }
 
   function drawIfNeeded(next13: Tile[]) {
-<<<<<<< codex/add-image-display-for-ykxiep
-=======
-    if (isWinningHand(next13)) {
-      setResultMsg("和了");
-      setGameEnded(true);
-      return;
-    }
->>>>>>> main
     if (turn >= MAX_TURNS || wall.length === 0) {
       setResultMsg("流局");
       setGameEnded(true);
@@ -116,7 +105,9 @@ export default function Home() {
     const discard = fullHand[idx];
     const currentUke = calcUkeireForDiscard(fullHand, idx).mentsuCount;
     let bestUke = -1;
-    for (let i = 0; i < fullHand.length; i++) bestUke = Math.max(bestUke, calcUkeireForDiscard(fullHand, i).mentsuCount);
+    for (let i = 0; i < fullHand.length; i++) {
+      bestUke = Math.max(bestUke, calcUkeireForDiscard(fullHand, i).mentsuCount);
+    }
     setStats((s) => ({ ...s, totalMoves: s.totalMoves + 1, goodMoves: s.goodMoves + (currentUke >= bestUke ? 1 : 0) }));
     const next13 = handWithoutIndex(fullHand, idx).sort(sortTiles);
     if (gameEnded) return;
@@ -139,13 +130,26 @@ export default function Home() {
         {resultMsg ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "100%" }}>
             <div style={{ fontWeight: 700, color: "#ffe082", fontSize: 20 }}>{resultMsg}</div>
-            {gameEnded && <button onClick={() => startNextGame(resultMsg === "和了")} style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: "#6cc9ff", color: "#023", fontWeight: 700, cursor: "pointer" }}>New Game</button>}
+            {gameEnded && (
+              <button
+                onClick={() => startNextGame(resultMsg === "和了")}
+                style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: "#6cc9ff", color: "#023", fontWeight: 700, cursor: "pointer" }}
+              >
+                New Game
+              </button>
+            )}
           </div>
         ) : (
           <>
-            <div style={{ fontWeight: 700, marginBottom: 4, minHeight: 20 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div>
-            <div style={{ minHeight: 20 }}>{selectedUke && selectedIdx != null ? `受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚` : ""}</div>
-            <div style={{ color: "#bbe7d5", marginTop: 3, minHeight: 20 }}>{selectedUke && selectedIdx != null ? "同じ牌をもう一度クリックで打牌確定" : ""}</div>
+            <div style={{ fontWeight: 700, marginBottom: 4, minHeight: 20 }}>
+              {selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}
+            </div>
+            <div style={{ minHeight: 20 }}>
+              {selectedUke && selectedIdx != null ? `受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚` : ""}
+            </div>
+            <div style={{ color: "#bbe7d5", marginTop: 3, minHeight: 20 }}>
+              {selectedUke && selectedIdx != null ? "同じ牌をもう一度クリックで打牌確定" : ""}
+            </div>
           </>
         )}
       </div>
@@ -199,7 +203,12 @@ export default function Home() {
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 6, background: "#00552e" }}><div style={{ fontSize: 11, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 16, color: "#f5f5f5" }}>{value}</div></div>;
+  return (
+    <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 6, background: "#00552e" }}>
+      <div style={{ fontSize: 11, color: "#bbe7d5" }}>{label}</div>
+      <div style={{ fontWeight: 700, fontSize: 16, color: "#f5f5f5" }}>{value}</div>
+    </div>
+  );
 }
 
 function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: boolean }) {
