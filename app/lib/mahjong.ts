@@ -197,6 +197,10 @@ export function tileImagePath(tile: Tile) {
   const base = (typeof import.meta !== "undefined" && (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL) || "/";
   const normalizedBase = base.endsWith("/") ? base : `${base}/`;
   return `${normalizedBase}tiles/Regular/${tileFileName(tile)}`;
+<<<<<<< codex/add-image-display-for-ozergx
+=======
+
+>>>>>>> main
 }
 
 
@@ -224,6 +228,22 @@ export function isWinningHand(hand: Tile[]): boolean {
 function canFormMelds(counts: number[]): boolean {
   let i = counts.findIndex((c) => c > 0);
   if (i === -1) return true;
+<<<<<<< codex/add-image-display-for-ozergx
+=======
+
+  if (counts[i] >= 3) {
+    counts[i] -= 3;
+    if (canFormMelds(counts)) return true;
+    counts[i] += 3;
+  }
+
+  if (i <= 26 && i % 9 <= 6 && counts[i + 1] > 0 && counts[i + 2] > 0) {
+    counts[i]--; counts[i + 1]--; counts[i + 2]--;
+    if (canFormMelds(counts)) return true;
+    counts[i]++; counts[i + 1]++; counts[i + 2]++;
+  }
+  return false;
+>>>>>>> main
 
   if (counts[i] >= 3) {
     counts[i] -= 3;

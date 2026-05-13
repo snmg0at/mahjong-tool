@@ -37,6 +37,7 @@ export default function Home() {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [selectedUke, setSelectedUke] = useState<UkeireResult | null>(null);
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0 });
+
   const [resultMsg, setResultMsg] = useState("");
 
   const fullHand = useMemo(() => {
@@ -44,6 +45,7 @@ export default function Home() {
     if (drawTile != null) base.push(drawTile);
     return base;
   }, [hand13, drawTile]);
+
 
   const shantenM = useMemo(() => shantenMentsu(fullHand), [fullHand]);
   const shantenC = useMemo(() => shantenChiitoi(fullHand), [fullHand]);
@@ -58,6 +60,7 @@ export default function Home() {
     setSelectedIdx(null);
     setSelectedUke(null);
     setStats((s) => ({ totalGames: s.totalGames + 1, wins: s.wins + (win ? 1 : 0) }));
+
     setResultMsg("");
   }
 
@@ -65,6 +68,7 @@ export default function Home() {
     if (isWinningHand(next13)) {
       setResultMsg("和了！");
       setTimeout(() => startNextGame(true), 1200);
+
       return;
     }
     if (turn >= MAX_TURNS || wall.length === 0) {
@@ -119,6 +123,7 @@ export default function Home() {
         )}
       </div>
 
+
       <div style={{ marginBottom: 6, fontWeight: 700 }}>河（6枚ずつ）</div>
       <River river={river} />
 
@@ -133,7 +138,9 @@ export default function Home() {
               height: 60,
               padding: 0,
               borderRadius: 0,
+
               outline: i === selectedIdx ? "2px solid #6cc9ff" : "none",
+
               marginRight: -1,
               background: "#13523d",
               cursor: "pointer",
@@ -152,7 +159,9 @@ export default function Home() {
               height: 60,
               padding: 0,
               borderRadius: 0,
+
               outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none",
+
               marginLeft: 14,
               background: "#13523d",
               cursor: "pointer",
@@ -173,13 +182,17 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: boolean }) {
   return (
+
     <span style={{ display: "inline-flex", width: "100%", height: "100%", borderRadius: compact ? 0 : 6, background: "#f4f4f4", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+
       <img
         src={tileImagePath(tile)}
         alt={TILE_LABELS[tile]}
         width={44}
         height={60}
+
         style={{ display: "block", pointerEvents: "none", width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
+
         onError={(e) => {
           e.currentTarget.style.display = "none";
           const next = e.currentTarget.nextElementSibling as HTMLElement | null;
@@ -203,7 +216,9 @@ function River({ river }: { river: Tile[] }) {
         rows.map((row, rIdx) => (
           <div key={rIdx} style={{ display: "flex", gap: 6, marginBottom: 6, justifyContent: "center" }}>
             {row.map((t, i) => (
+
               <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: 28, height: 40 }}>
+
                 <MahjongTileFace tile={t} />
               </span>
             ))}
