@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   calcUkeireForDiscard,
   handWithoutIndex,
@@ -51,6 +51,7 @@ export default function Home() {
   const shantenM = useMemo(() => shantenMentsu(fullHand), [fullHand]);
   const shantenC = useMemo(() => shantenChiitoi(fullHand), [fullHand]);
   const goodRate = stats.totalMoves ? Math.round((stats.goodMoves / stats.totalMoves) * 100) : 0;
+<<<<<<< codex/add-image-display-for-ykxiep
 
   useEffect(() => {
     if (gameEnded) return;
@@ -60,6 +61,8 @@ export default function Home() {
     setGameEnded(true);
     setStats((s) => ({ ...s, totalGames: s.totalGames + 1, wins: s.wins + 1 }));
   }, [fullHand, gameEnded]);
+=======
+>>>>>>> main
 
   function startNextGame(win: boolean) {
     const next = createGame();
@@ -76,6 +79,14 @@ export default function Home() {
   }
 
   function drawIfNeeded(next13: Tile[]) {
+<<<<<<< codex/add-image-display-for-ykxiep
+=======
+    if (isWinningHand(next13)) {
+      setResultMsg("和了");
+      setGameEnded(true);
+      return;
+    }
+>>>>>>> main
     if (turn >= MAX_TURNS || wall.length === 0) {
       setResultMsg("流局");
       setGameEnded(true);
