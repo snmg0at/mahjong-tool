@@ -194,6 +194,7 @@ export function tileFileName(tile: Tile) {
 }
 
 export function tileImagePath(tile: Tile) {
-  return `/tiles/Regular/${tileFileName(tile)}`;
-
+  const base = (typeof import.meta !== "undefined" && (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL) || "/";
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  return `${normalizedBase}tiles/Regular/${tileFileName(tile)}`;
 }
