@@ -53,9 +53,13 @@ export function shantenMentsu(hand: Tile[]): number {
     }
 
     if (idx <= 26 && idx % 9 <= 6 && c[idx + 1] > 0 && c[idx + 2] > 0) {
-      c[idx]--; c[idx + 1]--; c[idx + 2]--;
+      c[idx]--;
+      c[idx + 1]--;
+      c[idx + 2]--;
       dfsMentsuTatsu(idx, m + 1, t, pair);
-      c[idx]++; c[idx + 1]++; c[idx + 2]++;
+      c[idx]++;
+      c[idx + 1]++;
+      c[idx + 2]++;
     }
 
     if (pair === 0 && c[idx] >= 2) {
@@ -71,15 +75,19 @@ export function shantenMentsu(hand: Tile[]): number {
     }
 
     if (idx <= 26 && idx % 9 <= 7 && c[idx + 1] > 0) {
-      c[idx]--; c[idx + 1]--;
+      c[idx]--;
+      c[idx + 1]--;
       dfsMentsuTatsu(idx, m, t + 1, pair);
-      c[idx]++; c[idx + 1]++;
+      c[idx]++;
+      c[idx + 1]++;
     }
 
     if (idx <= 26 && idx % 9 <= 6 && c[idx + 2] > 0) {
-      c[idx]--; c[idx + 2]--;
+      c[idx]--;
+      c[idx + 2]--;
       dfsMentsuTatsu(idx, m, t + 1, pair);
-      c[idx]++; c[idx + 2]++;
+      c[idx]++;
+      c[idx + 2]++;
     }
 
     c[idx]--;
