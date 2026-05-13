@@ -38,6 +38,7 @@ export default function Home() {
   const [turn, setTurn] = useState(1);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [selectedUke, setSelectedUke] = useState<UkeireResult | null>(null);
+  const [selectedWaitInfo, setSelectedWaitInfo] = useState<{ labels: string[]; total: number } | null>(null);
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
   const [resultMsg, setResultMsg] = useState("");
   const [gameEnded, setGameEnded] = useState(false);
@@ -70,6 +71,7 @@ export default function Home() {
     setTurn(1);
     setSelectedIdx(null);
     setSelectedUke(null);
+    setSelectedWaitInfo(null);
     setStats((s) => ({ ...s, totalGames: s.totalGames + 1, wins: s.wins + (win ? 1 : 0) }));
     setResultMsg("");
     setGameEnded(false);
@@ -94,20 +96,36 @@ export default function Home() {
     setTurn((v) => v + 1);
     setSelectedIdx(null);
     setSelectedUke(null);
+    setSelectedWaitInfo(null);
+  }
+
+  function calcWaitInfoForDiscard(hand14: Tile[], discardIdx: number) {
+    const next13 = handWithoutIndex(hand14, discardIdx).sort(sortTiles);
+    const waits: Tile[] = [];
+    for (let t = 0; t < 34; t++) {
+      if (isWinningHand([...next13, t])) waits.push(t);
+    }
+    if (waits.length === 0) return null;
+
+    const counts = Array(34).fill(0);
+    for (const t of next13) counts[t]++;
+    let total = 0;
+    for (const t of waits) total += Math.max(0, 4 - counts[t]);
+
+    return { labels: waits.map((t) => TILE_LABELS[t]), total };
   }
 
   function onTileClick(idx: number) {
     if (selectedIdx !== idx) {
       setSelectedIdx(idx);
       setSelectedUke(calcUkeireForDiscard(fullHand, idx));
+      setSelectedWaitInfo(calcWaitInfoForDiscard(fullHand, idx));
       return;
     }
     const discard = fullHand[idx];
     const currentUke = calcUkeireForDiscard(fullHand, idx).mentsuCount;
     let bestUke = -1;
-    for (let i = 0; i < fullHand.length; i++) {
-      bestUke = Math.max(bestUke, calcUkeireForDiscard(fullHand, i).mentsuCount);
-    }
+    for (let i = 0; i < fullHand.length; i++) bestUke = Math.max(bestUke, calcUkeireForDiscard(fullHand, i).mentsuCount);
     setStats((s) => ({ ...s, totalMoves: s.totalMoves + 1, goodMoves: s.goodMoves + (currentUke >= bestUke ? 1 : 0) }));
     const next13 = handWithoutIndex(fullHand, idx).sort(sortTiles);
     if (gameEnded) return;
@@ -130,25 +148,18 @@ export default function Home() {
         {resultMsg ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "100%" }}>
             <div style={{ fontWeight: 700, color: "#ffe082", fontSize: 20 }}>{resultMsg}</div>
-            {gameEnded && (
-              <button
-                onClick={() => startNextGame(resultMsg === "和了")}
-                style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: "#6cc9ff", color: "#023", fontWeight: 700, cursor: "pointer" }}
-              >
-                New Game
-              </button>
-            )}
+            {gameEnded && <button onClick={() => startNextGame(resultMsg === "和了")} style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: "#6cc9ff", color: "#023", fontWeight: 700, cursor: "pointer" }}>New Game</button>}
           </div>
         ) : (
           <>
-            <div style={{ fontWeight: 700, marginBottom: 4, minHeight: 20 }}>
-              {selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}
-            </div>
-            <div style={{ minHeight: 20 }}>
-              {selectedUke && selectedIdx != null ? `受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚` : ""}
-            </div>
+            <div style={{ fontWeight: 700, marginBottom: 4, minHeight: 20 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div>
+            <div style={{ minHeight: 20 }}>{selectedUke && selectedIdx != null ? `受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚` : ""}</div>
             <div style={{ color: "#bbe7d5", marginTop: 3, minHeight: 20 }}>
-              {selectedUke && selectedIdx != null ? "同じ牌をもう一度クリックで打牌確定" : ""}
+              {selectedUke && selectedIdx != null
+                ? selectedWaitInfo
+                  ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）`
+                  : "同じ牌をもう一度クリックで打牌確定"
+                : ""}
             </div>
           </>
         )}
@@ -203,12 +214,7 @@ export default function Home() {
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 6, background: "#00552e" }}>
-      <div style={{ fontSize: 11, color: "#bbe7d5" }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 16, color: "#f5f5f5" }}>{value}</div>
-    </div>
-  );
+  return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 6, background: "#00552e" }}><div style={{ fontSize: 11, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 16, color: "#f5f5f5" }}>{value}</div></div>;
 }
 
 function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: boolean }) {
