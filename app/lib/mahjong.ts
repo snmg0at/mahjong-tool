@@ -197,6 +197,7 @@ export function tileImagePath(tile: Tile) {
   const base = (typeof import.meta !== "undefined" && (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL) || "/";
   const normalizedBase = base.endsWith("/") ? base : `${base}/`;
   return `${normalizedBase}tiles/Regular/${tileFileName(tile)}`;
+
 }
 
 
@@ -237,4 +238,5 @@ function canFormMelds(counts: number[]): boolean {
     counts[i]++; counts[i + 1]++; counts[i + 2]++;
   }
   return false;
+
 }
