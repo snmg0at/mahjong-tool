@@ -132,6 +132,17 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
   const baseM = shantenMentsu(base13);
   const baseC = shantenChiitoi(base13);
 
+  if (baseM === 0) {
+    let mKinds = 0;
+    let mCount = 0;
+    for (let t = 0; t < 34; t++) {
+      if (!isWinningHand([...base13, t])) continue;
+      mKinds++;
+      mCount += Math.max(0, 4 - counts13[t]);
+    }
+    return { mentsuKinds: mKinds, mentsuCount: mCount, chiitoiKinds: 0, chiitoiCount: 0 };
+  }
+
   let mKinds = 0;
   let mCount = 0;
   let cKinds = 0;
@@ -186,14 +197,55 @@ export function evaluatePathWeight(hand: Tile[]) {
 
 
 export function tileFileName(tile: Tile) {
-  if (tile <= 8) return `${tile + 1}m.svg`;
-  if (tile <= 17) return `${tile - 8}p.svg`;
-  if (tile <= 26) return `${tile - 17}s.svg`;
-  const honors = ["east.svg", "south.svg", "west.svg", "north.svg", "haku.svg", "hatsu.svg", "chun.svg"];
+  if (tile <= 8) return `${tile + 1}m.jpg`;
+  if (tile <= 17) return `${tile - 8}p.jpg`;
+  if (tile <= 26) return `${tile - 17}s.jpg`;
+  const honors = ["east.jpg", "south.jpg", "west.jpg", "north.jpg", "white.jpg", "green.jpg", "red.jpg"];
   return honors[tile - 27];
 }
 
 export function tileImagePath(tile: Tile) {
-  return `/tiles/Regular/${tileFileName(tile)}`;
+  const base = (typeof import.meta !== "undefined" && (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL) || "/";
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  return `${normalizedBase}tiles/Regular/${tileFileName(tile)}`;
+}
 
+
+export function isWinningHand(hand: Tile[]): boolean {
+  if (hand.length !== 14) return false;
+  const counts = toCounts(hand);
+
+  let pairs = 0;
+  let uniq = 0;
+  for (const c of counts) {
+    if (c > 0) uniq++;
+    if (c >= 2) pairs++;
+  }
+  if (pairs === 7 && uniq === 7) return true;
+
+  for (let i = 0; i < 34; i++) {
+    if (counts[i] < 2) continue;
+    const work = counts.slice();
+    work[i] -= 2;
+    if (canFormMelds(work)) return true;
+  }
+  return false;
+}
+
+function canFormMelds(counts: number[]): boolean {
+  let i = counts.findIndex((c) => c > 0);
+  if (i === -1) return true;
+
+  if (counts[i] >= 3) {
+    counts[i] -= 3;
+    if (canFormMelds(counts)) return true;
+    counts[i] += 3;
+  }
+
+  if (i <= 26 && i % 9 <= 6 && counts[i + 1] > 0 && counts[i + 2] > 0) {
+    counts[i]--; counts[i + 1]--; counts[i + 2]--;
+    if (canFormMelds(counts)) return true;
+    counts[i]++; counts[i + 1]++; counts[i + 2]++;
+  }
+  return false;
 }
