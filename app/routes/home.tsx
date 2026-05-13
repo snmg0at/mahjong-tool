@@ -40,12 +40,12 @@ export default function Home() {
 
   const [resultMsg, setResultMsg] = useState("");
 
-
   const fullHand = useMemo(() => {
     const base = [...hand13];
     if (drawTile != null) base.push(drawTile);
     return base;
   }, [hand13, drawTile]);
+
 
   const shantenM = useMemo(() => shantenMentsu(fullHand), [fullHand]);
   const shantenC = useMemo(() => shantenChiitoi(fullHand), [fullHand]);
@@ -111,17 +111,16 @@ export default function Home() {
         <Stat label="勝利/総数" value={`${stats.wins}/${stats.totalGames}`} />
       </section>
 
-
-      <div style={{ padding: 8, borderRadius: 8, marginBottom: 8, background: "#00552e", fontSize: 14, minHeight: 78 }}>
+      <div style={{ padding: 8, borderRadius: 8, marginBottom: 8, background: "#00552e", fontSize: 14, height: 86, overflow: "hidden" }}>
         {resultMsg ? (
-          <div style={{ fontWeight: 700, color: "#ffe082", fontSize: 18 }}>{resultMsg}</div>
-        ) : selectedUke && selectedIdx != null ? (
+          <div style={{ fontWeight: 700, color: "#ffe082", fontSize: 18, lineHeight: "70px" }}>{resultMsg}</div>
+        ) : (
           <>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>仮選択牌: {TILE_LABELS[fullHand[selectedIdx]]}</div>
-            <div>受け入れ: {selectedUke.mentsuKinds}種 {selectedUke.mentsuCount}枚</div>
-            <div style={{ color: "#bbe7d5", marginTop: 3 }}>同じ牌をもう一度クリックで打牌確定</div>
+            <div style={{ fontWeight: 700, marginBottom: 4, minHeight: 20 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div>
+            <div style={{ minHeight: 20 }}>{selectedUke && selectedIdx != null ? `受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚` : ""}</div>
+            <div style={{ color: "#bbe7d5", marginTop: 3, minHeight: 20 }}>{selectedUke && selectedIdx != null ? "同じ牌をもう一度クリックで打牌確定" : ""}</div>
           </>
-        ) : null}
+        )}
       </div>
 
 
@@ -185,13 +184,15 @@ function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: bool
   return (
 
     <span style={{ display: "inline-flex", width: "100%", height: "100%", borderRadius: compact ? 0 : 6, background: "#f4f4f4", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-main
+
       <img
         src={tileImagePath(tile)}
         alt={TILE_LABELS[tile]}
         width={44}
         height={60}
-        style={{ display: "block", pointerEvents: "none", objectFit: "cover" }}
+
+        style={{ display: "block", pointerEvents: "none", width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
+
         onError={(e) => {
           e.currentTarget.style.display = "none";
           const next = e.currentTarget.nextElementSibling as HTMLElement | null;
