@@ -197,4 +197,46 @@ export function tileImagePath(tile: Tile) {
   const base = (typeof import.meta !== "undefined" && (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL) || "/";
   const normalizedBase = base.endsWith("/") ? base : `${base}/`;
   return `${normalizedBase}tiles/Regular/${tileFileName(tile)}`;
+
+}
+
+
+export function isWinningHand(hand: Tile[]): boolean {
+  if (hand.length !== 14) return false;
+  const counts = toCounts(hand);
+
+  let pairs = 0;
+  let uniq = 0;
+  for (const c of counts) {
+    if (c > 0) uniq++;
+    if (c >= 2) pairs++;
+  }
+  if (pairs === 7 && uniq === 7) return true;
+
+  for (let i = 0; i < 34; i++) {
+    if (counts[i] < 2) continue;
+    const work = counts.slice();
+    work[i] -= 2;
+    if (canFormMelds(work)) return true;
+  }
+  return false;
+}
+
+function canFormMelds(counts: number[]): boolean {
+  let i = counts.findIndex((c) => c > 0);
+  if (i === -1) return true;
+
+  if (counts[i] >= 3) {
+    counts[i] -= 3;
+    if (canFormMelds(counts)) return true;
+    counts[i] += 3;
+  }
+
+  if (i <= 26 && i % 9 <= 6 && counts[i + 1] > 0 && counts[i + 2] > 0) {
+    counts[i]--; counts[i + 1]--; counts[i + 2]--;
+    if (canFormMelds(counts)) return true;
+    counts[i]++; counts[i + 1]++; counts[i + 2]++;
+  }
+  return false;
+
 }

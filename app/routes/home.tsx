@@ -5,6 +5,7 @@ import {
   makeWall,
   shantenChiitoi,
   shantenMentsu,
+  isWinningHand,
   sortTiles,
   TILE_LABELS,
   tileImagePath,
@@ -37,6 +38,9 @@ export default function Home() {
   const [selectedUke, setSelectedUke] = useState<UkeireResult | null>(null);
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0 });
 
+  const [resultMsg, setResultMsg] = useState("");
+
+
   const fullHand = useMemo(() => {
     const base = [...hand13];
     if (drawTile != null) base.push(drawTile);
@@ -56,11 +60,15 @@ export default function Home() {
     setSelectedIdx(null);
     setSelectedUke(null);
     setStats((s) => ({ totalGames: s.totalGames + 1, wins: s.wins + (win ? 1 : 0) }));
+
+    setResultMsg("");
   }
 
   function drawIfNeeded(next13: Tile[]) {
-    if (shantenMentsu(next13) <= -1 || shantenChiitoi(next13) <= -1) {
-      startNextGame(true);
+    if (isWinningHand(next13)) {
+      setResultMsg("和了！");
+      setTimeout(() => startNextGame(true), 1200);
+
       return;
     }
     if (turn >= MAX_TURNS || wall.length === 0) {
@@ -103,13 +111,19 @@ export default function Home() {
         <Stat label="勝利/総数" value={`${stats.wins}/${stats.totalGames}`} />
       </section>
 
-      {selectedUke && selectedIdx != null && (
-        <div style={{ padding: 8, border: "1px solid #2b7056", borderRadius: 8, marginBottom: 8, background: "#00552e", fontSize: 14 }}>
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>仮選択牌: {TILE_LABELS[fullHand[selectedIdx]]}</div>
-          <div>受け入れ: {selectedUke.mentsuKinds}種 {selectedUke.mentsuCount}枚</div>
-          <div style={{ color: "#bbe7d5", marginTop: 3 }}>同じ牌をもう一度クリックで打牌確定</div>
-        </div>
-      )}
+
+      <div style={{ padding: 8, borderRadius: 8, marginBottom: 8, background: "#00552e", fontSize: 14, minHeight: 78 }}>
+        {resultMsg ? (
+          <div style={{ fontWeight: 700, color: "#ffe082", fontSize: 18 }}>{resultMsg}</div>
+        ) : selectedUke && selectedIdx != null ? (
+          <>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>仮選択牌: {TILE_LABELS[fullHand[selectedIdx]]}</div>
+            <div>受け入れ: {selectedUke.mentsuKinds}種 {selectedUke.mentsuCount}枚</div>
+            <div style={{ color: "#bbe7d5", marginTop: 3 }}>同じ牌をもう一度クリックで打牌確定</div>
+          </>
+        ) : null}
+      </div>
+
 
       <div style={{ marginBottom: 6, fontWeight: 700 }}>河（6枚ずつ）</div>
       <River river={river} />
@@ -125,7 +139,9 @@ export default function Home() {
               height: 60,
               padding: 0,
               borderRadius: 0,
-              border: i === selectedIdx ? "2px solid #6cc9ff" : "1px solid #2b7056",
+
+              outline: i === selectedIdx ? "2px solid #6cc9ff" : "none",
+
               marginRight: -1,
               background: "#13523d",
               cursor: "pointer",
@@ -144,7 +160,9 @@ export default function Home() {
               height: 60,
               padding: 0,
               borderRadius: 0,
-              border: selectedIdx === 13 ? "2px solid #6cc9ff" : "1px solid #2b7056",
+
+              outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none",
+
               marginLeft: 14,
               background: "#13523d",
               cursor: "pointer",
@@ -165,7 +183,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: boolean }) {
   return (
-    <span style={{ display: "inline-flex", width: "100%", height: "100%", borderRadius: compact ? 0 : 6, border: "1px solid #95d9bf", background: "#f4f4f4", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+
+    <span style={{ display: "inline-flex", width: "100%", height: "100%", borderRadius: compact ? 0 : 6, background: "#f4f4f4", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+main
       <img
         src={tileImagePath(tile)}
         alt={TILE_LABELS[tile]}
@@ -188,14 +208,16 @@ function River({ river }: { river: Tile[] }) {
   for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6));
 
   return (
-    <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 8, minHeight: 64, marginBottom: 8, background: "#00552e" }}>
+    <div style={{ borderRadius: 8, padding: 8, minHeight: 64, marginBottom: 8, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "center" }}>
       {rows.length === 0 ? (
         <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div>
       ) : (
         rows.map((row, rIdx) => (
-          <div key={rIdx} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+          <div key={rIdx} style={{ display: "flex", gap: 6, marginBottom: 6, justifyContent: "center" }}>
             {row.map((t, i) => (
-              <span key={`${rIdx}-${i}`} style={{ border: "1px solid #95d9bf", borderRadius: 4, padding: "2px", background: "#184f3b", width: 34, height: 46 }}>
+
+              <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: 28, height: 40 }}>
+
                 <MahjongTileFace tile={t} />
               </span>
             ))}
