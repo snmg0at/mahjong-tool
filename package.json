@@ -4,9 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
-    "build": "REACT_ROUTER_BUILD_DIRECTORY=build react-router build",
+    "check:conflicts": "node scripts/check-conflicts.mjs",
+    "build": "npm run check:conflicts && REACT_ROUTER_BUILD_DIRECTORY=build react-router build",
     "deploy": "npm run build && wrangler deploy",
-    "test": "node --test app/lib/mahjong.test.ts"
+    "test": "npm run check:conflicts && node --test app/lib/mahjong.test.ts"
   },
   "dependencies": {
     "@react-router/cloudflare": "^7.15.0",

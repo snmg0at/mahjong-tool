@@ -132,6 +132,17 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
   const baseM = shantenMentsu(base13);
   const baseC = shantenChiitoi(base13);
 
+  if (baseM === 0) {
+    let mKinds = 0;
+    let mCount = 0;
+    for (let t = 0; t < 34; t++) {
+      if (!isWinningHand([...base13, t])) continue;
+      mKinds++;
+      mCount += Math.max(0, 4 - counts13[t]);
+    }
+    return { mentsuKinds: mKinds, mentsuCount: mCount, chiitoiKinds: 0, chiitoiCount: 0 };
+  }
+
   let mKinds = 0;
   let mCount = 0;
   let cKinds = 0;

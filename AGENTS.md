@@ -12,5 +12,7 @@
 
 - Keep PRs small: one theme per PR, and avoid changing the same file in multiple open PRs.
 - Before opening or merging a PR, sync with latest `main` and resolve conflicts locally first.
+
 - Never commit unresolved merge markers.
+
 - If a conflict happens in a file with large edits, prefer replacing that file with the intended final version, then rerun build/tests.
