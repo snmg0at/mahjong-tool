@@ -51,7 +51,7 @@ export default function Home() {
   const shantenM = useMemo(() => shantenMentsu(fullHand), [fullHand]);
   const shantenC = useMemo(() => shantenChiitoi(fullHand), [fullHand]);
   const goodRate = stats.totalMoves ? Math.round((stats.goodMoves / stats.totalMoves) * 100) : 0;
-<<<<<<< codex/add-image-display-for-ykxiep
+
 
   useEffect(() => {
     if (gameEnded) return;
