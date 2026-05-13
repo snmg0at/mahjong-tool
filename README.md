@@ -12,3 +12,6 @@ npm run deploy
 
 貼り付け後は `Commit changes...` で `main` に保存してください。  
 これで再ビルドが走ります。
+
+
+
