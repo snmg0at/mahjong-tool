@@ -18,6 +18,8 @@ const MAX_TURNS = 18;
 type Stats = {
   totalGames: number;
   wins: number;
+  goodMoves: number;
+  totalMoves: number;
 };
 
 function createGame() {
@@ -36,8 +38,7 @@ export default function Home() {
   const [turn, setTurn] = useState(1);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [selectedUke, setSelectedUke] = useState<UkeireResult | null>(null);
-  const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0 });
-
+  const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
   const [resultMsg, setResultMsg] = useState("");
 
   const fullHand = useMemo(() => {
@@ -46,9 +47,9 @@ export default function Home() {
     return base;
   }, [hand13, drawTile]);
 
-
   const shantenM = useMemo(() => shantenMentsu(fullHand), [fullHand]);
   const shantenC = useMemo(() => shantenChiitoi(fullHand), [fullHand]);
+  const goodRate = stats.totalMoves ? Math.round((stats.goodMoves / stats.totalMoves) * 100) : 0;
 
   function startNextGame(win: boolean) {
     const next = createGame();
@@ -59,8 +60,7 @@ export default function Home() {
     setTurn(1);
     setSelectedIdx(null);
     setSelectedUke(null);
-    setStats((s) => ({ totalGames: s.totalGames + 1, wins: s.wins + (win ? 1 : 0) }));
-
+    setStats((s) => ({ ...s, totalGames: s.totalGames + 1, wins: s.wins + (win ? 1 : 0) }));
     setResultMsg("");
   }
 
@@ -68,7 +68,6 @@ export default function Home() {
     if (isWinningHand(next13)) {
       setResultMsg("和了！");
       setTimeout(() => startNextGame(true), 1200);
-
       return;
     }
     if (turn >= MAX_TURNS || wall.length === 0) {
@@ -96,6 +95,10 @@ export default function Home() {
       return;
     }
     const discard = fullHand[idx];
+    const currentUke = calcUkeireForDiscard(fullHand, idx).mentsuCount;
+    let bestUke = -1;
+    for (let i = 0; i < fullHand.length; i++) bestUke = Math.max(bestUke, calcUkeireForDiscard(fullHand, i).mentsuCount);
+    setStats((s) => ({ ...s, totalMoves: s.totalMoves + 1, goodMoves: s.goodMoves + (currentUke >= bestUke ? 1 : 0) }));
     const next13 = handWithoutIndex(fullHand, idx).sort(sortTiles);
     setRiver((r) => [...r, discard]);
     drawIfNeeded(next13);
@@ -104,10 +107,11 @@ export default function Home() {
   return (
     <main style={{ maxWidth: 920, margin: "8px auto", fontFamily: "sans-serif", padding: "0 8px", color: "#f5f5f5" }}>
       <h1 style={{ marginBottom: 6, fontSize: 22 }}>麻雀 牌効率ゲーム</h1>
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(96px,1fr))", gap: 6, marginBottom: 8 }}>
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(90px,1fr))", gap: 6, marginBottom: 8 }}>
         <Stat label="メンツ手" value={String(shantenM)} />
         <Stat label="七対子" value={String(shantenC)} />
         <Stat label="巡目" value={String(turn)} />
+        <Stat label="良打率" value={`${goodRate}%`} />
         <Stat label="勝利/総数" value={`${stats.wins}/${stats.totalGames}`} />
       </section>
 
@@ -123,7 +127,6 @@ export default function Home() {
         )}
       </div>
 
-
       <div style={{ marginBottom: 6, fontWeight: 700 }}>河（6枚ずつ）</div>
       <River river={river} />
 
@@ -138,9 +141,7 @@ export default function Home() {
               height: 60,
               padding: 0,
               borderRadius: 0,
-
               outline: i === selectedIdx ? "2px solid #6cc9ff" : "none",
-
               marginRight: -1,
               background: "#13523d",
               cursor: "pointer",
@@ -159,9 +160,7 @@ export default function Home() {
               height: 60,
               padding: 0,
               borderRadius: 0,
-
               outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none",
-
               marginLeft: 14,
               background: "#13523d",
               cursor: "pointer",
@@ -182,17 +181,13 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: boolean }) {
   return (
-
     <span style={{ display: "inline-flex", width: "100%", height: "100%", borderRadius: compact ? 0 : 6, background: "#f4f4f4", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-
       <img
         src={tileImagePath(tile)}
         alt={TILE_LABELS[tile]}
         width={44}
         height={60}
-
-        style={{ display: "block", pointerEvents: "none", width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
-
+        style={{ display: "block", pointerEvents: "none", width: "auto", height: "100%", maxWidth: "100%", objectFit: "contain", objectPosition: "center", margin: "0 auto" }}
         onError={(e) => {
           e.currentTarget.style.display = "none";
           const next = e.currentTarget.nextElementSibling as HTMLElement | null;
@@ -216,9 +211,7 @@ function River({ river }: { river: Tile[] }) {
         rows.map((row, rIdx) => (
           <div key={rIdx} style={{ display: "flex", gap: 6, marginBottom: 6, justifyContent: "center" }}>
             {row.map((t, i) => (
-
               <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: 28, height: 40 }}>
-
                 <MahjongTileFace tile={t} />
               </span>
             ))}
