@@ -32,48 +32,68 @@ export function toCounts(hand: Tile[]) {
 
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
-  let meld = 0;
-  let taatsu = 0;
-  let pair = 0;
+  let best = 8;
 
-  for (let i = 0; i < 34; i++) {
-    while (c[i] >= 3) {
-      c[i] -= 3;
-      meld++;
+  function dfsMentsuTaatsu(idx: number, meld: number, taatsu: number, pair: number) {
+    while (idx < 34 && c[idx] === 0) idx++;
+    if (idx >= 34) {
+      const mm = Math.min(meld, 4);
+      const tt = Math.min(taatsu, 4 - mm);
+      best = Math.min(best, 8 - mm * 2 - tt - pair);
+      return;
     }
+
+    if (c[idx] >= 3) {
+      c[idx] -= 3;
+      dfsMentsuTaatsu(idx, meld + 1, taatsu, pair);
+      c[idx] += 3;
+    }
+
+    if (idx <= 26 && idx % 9 <= 6 && c[idx + 1] > 0 && c[idx + 2] > 0) {
+      c[idx]--;
+      c[idx + 1]--;
+      c[idx + 2]--;
+      dfsMentsuTaatsu(idx, meld + 1, taatsu, pair);
+      c[idx]++;
+      c[idx + 1]++;
+      c[idx + 2]++;
+    }
+
+    if (pair === 0 && c[idx] >= 2) {
+      c[idx] -= 2;
+      dfsMentsuTaatsu(idx, meld, taatsu, 1);
+      c[idx] += 2;
+    }
+
+    if (c[idx] >= 2) {
+      c[idx] -= 2;
+      dfsMentsuTaatsu(idx, meld, taatsu + 1, pair);
+      c[idx] += 2;
+    }
+
+    if (idx <= 26 && idx % 9 <= 7 && c[idx + 1] > 0) {
+      c[idx]--;
+      c[idx + 1]--;
+      dfsMentsuTaatsu(idx, meld, taatsu + 1, pair);
+      c[idx]++;
+      c[idx + 1]++;
+    }
+
+    if (idx <= 26 && idx % 9 <= 6 && c[idx + 2] > 0) {
+      c[idx]--;
+      c[idx + 2]--;
+      dfsMentsuTaatsu(idx, meld, taatsu + 1, pair);
+      c[idx]++;
+      c[idx + 2]++;
+    }
+
+    c[idx]--;
+    dfsMentsuTaatsu(idx, meld, taatsu, pair);
+    c[idx]++;
   }
 
-  for (const base of [0, 9, 18]) {
-    for (let i = base; i <= base + 6; i++) {
-      while (c[i] > 0 && c[i + 1] > 0 && c[i + 2] > 0) {
-        c[i]--;
-        c[i + 1]--;
-        c[i + 2]--;
-        meld++;
-      }
-    }
-  }
-
-  for (let i = 0; i < 34; i++) {
-    if (c[i] >= 2) {
-      c[i] -= 2;
-      pair++;
-    }
-  }
-
-  for (const base of [0, 9, 18]) {
-    for (let i = base; i <= base + 7; i++) {
-      while (c[i] > 0 && c[i + 1] > 0) {
-        c[i]--;
-        c[i + 1]--;
-        taatsu++;
-      }
-    }
-  }
-
-  taatsu = Math.min(taatsu, 4 - meld);
-  const hasPair = pair > 0 ? 1 : 0;
-  return Math.max(-1, 8 - meld * 2 - taatsu - hasPair);
+  dfsMentsuTaatsu(0, 0, 0, 0);
+  return best;
 }
 
 export function shantenChiitoi(hand: Tile[]): number {
@@ -131,20 +151,12 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
   const baseM = shantenMentsu(base13);
   const baseC = shantenChiitoi(base13);
+  const baseBest = Math.min(baseM, baseC);
 
-  if (baseM === 0) {
-    let mKinds = 0;
-    let mCount = 0;
-    for (let t = 0; t < 34; t++) {
-      if (!isWinningHand([...base13, t])) continue;
-      mKinds++;
-      mCount += Math.max(0, 4 - counts13[t]);
-    }
-    return { mentsuKinds: mKinds, mentsuCount: mCount, chiitoiKinds: 0, chiitoiCount: 0 };
-  }
 
-  let mKinds = 0;
-  let mCount = 0;
+  let bestKinds = 0;
+  let bestCount = 0;
+
   let cKinds = 0;
   let cCount = 0;
 
@@ -155,18 +167,20 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
     const m = shantenMentsu(next);
     const c = shantenChiitoi(next);
+    const best = Math.min(m, c);
 
-    if (m < baseM) {
-      mKinds++;
-      mCount += rem;
+    if (best < baseBest) {
+      bestKinds++;
+      bestCount += rem;
     }
+
     if (c < baseC) {
       cKinds++;
       cCount += rem;
     }
   }
 
-  return { mentsuKinds: mKinds, mentsuCount: mCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
+  return { mentsuKinds: bestKinds, mentsuCount: bestCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
 }
 
 export function evaluatePathWeight(hand: Tile[]) {
@@ -235,6 +249,7 @@ export function isWinningHand(hand: Tile[]): boolean {
 function canFormMelds(counts: number[]): boolean {
   let i = counts.findIndex((c) => c > 0);
   if (i === -1) return true;
+
 
   if (counts[i] >= 3) {
     counts[i] -= 3;
