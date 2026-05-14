@@ -32,48 +32,68 @@ export function toCounts(hand: Tile[]) {
 
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
-  let meld = 0;
-  let taatsu = 0;
-  let pair = 0;
+  let best = 8;
 
-  for (let i = 0; i < 34; i++) {
-    while (c[i] >= 3) {
-      c[i] -= 3;
-      meld++;
+  function dfsMentsuTaatsu(idx: number, meld: number, taatsu: number, pair: number) {
+    while (idx < 34 && c[idx] === 0) idx++;
+    if (idx >= 34) {
+      const mm = Math.min(meld, 4);
+      const tt = Math.min(taatsu, 4 - mm);
+      best = Math.min(best, 8 - mm * 2 - tt - pair);
+      return;
     }
+
+    if (c[idx] >= 3) {
+      c[idx] -= 3;
+      dfsMentsuTaatsu(idx, meld + 1, taatsu, pair);
+      c[idx] += 3;
+    }
+
+    if (idx <= 26 && idx % 9 <= 6 && c[idx + 1] > 0 && c[idx + 2] > 0) {
+      c[idx]--;
+      c[idx + 1]--;
+      c[idx + 2]--;
+      dfsMentsuTaatsu(idx, meld + 1, taatsu, pair);
+      c[idx]++;
+      c[idx + 1]++;
+      c[idx + 2]++;
+    }
+
+    if (pair === 0 && c[idx] >= 2) {
+      c[idx] -= 2;
+      dfsMentsuTaatsu(idx, meld, taatsu, 1);
+      c[idx] += 2;
+    }
+
+    if (c[idx] >= 2) {
+      c[idx] -= 2;
+      dfsMentsuTaatsu(idx, meld, taatsu + 1, pair);
+      c[idx] += 2;
+    }
+
+    if (idx <= 26 && idx % 9 <= 7 && c[idx + 1] > 0) {
+      c[idx]--;
+      c[idx + 1]--;
+      dfsMentsuTaatsu(idx, meld, taatsu + 1, pair);
+      c[idx]++;
+      c[idx + 1]++;
+    }
+
+    if (idx <= 26 && idx % 9 <= 6 && c[idx + 2] > 0) {
+      c[idx]--;
+      c[idx + 2]--;
+      dfsMentsuTaatsu(idx, meld, taatsu + 1, pair);
+      c[idx]++;
+      c[idx + 2]++;
+    }
+
+    c[idx]--;
+    dfsMentsuTaatsu(idx, meld, taatsu, pair);
+    c[idx]++;
   }
 
-  for (const base of [0, 9, 18]) {
-    for (let i = base; i <= base + 6; i++) {
-      while (c[i] > 0 && c[i + 1] > 0 && c[i + 2] > 0) {
-        c[i]--;
-        c[i + 1]--;
-        c[i + 2]--;
-        meld++;
-      }
-    }
-  }
-
-  for (let i = 0; i < 34; i++) {
-    if (c[i] >= 2) {
-      c[i] -= 2;
-      pair++;
-    }
-  }
-
-  for (const base of [0, 9, 18]) {
-    for (let i = base; i <= base + 7; i++) {
-      while (c[i] > 0 && c[i + 1] > 0) {
-        c[i]--;
-        c[i + 1]--;
-        taatsu++;
-      }
-    }
-  }
-
-  taatsu = Math.min(taatsu, 4 - meld);
-  const hasPair = pair > 0 ? 1 : 0;
-  return Math.max(-1, 8 - meld * 2 - taatsu - hasPair);
+  dfsMentsuTaatsu(0, 0, 0, 0);
+  return best;
 }
 
 export function shantenChiitoi(hand: Tile[]): number {
@@ -131,9 +151,10 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
   const baseM = shantenMentsu(base13);
   const baseC = shantenChiitoi(base13);
+  const baseBest = Math.min(baseM, baseC);
 
-  let mKinds = 0;
-  let mCount = 0;
+  let bestKinds = 0;
+  let bestCount = 0;
   let cKinds = 0;
   let cCount = 0;
 
@@ -144,18 +165,20 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
     const m = shantenMentsu(next);
     const c = shantenChiitoi(next);
+    const best = Math.min(m, c);
 
-    if (m < baseM) {
-      mKinds++;
-      mCount += rem;
+    if (best < baseBest) {
+      bestKinds++;
+      bestCount += rem;
     }
+
     if (c < baseC) {
       cKinds++;
       cCount += rem;
     }
   }
 
-  return { mentsuKinds: mKinds, mentsuCount: mCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
+  return { mentsuKinds: bestKinds, mentsuCount: bestCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
 }
 
 export function evaluatePathWeight(hand: Tile[]) {
@@ -186,14 +209,55 @@ export function evaluatePathWeight(hand: Tile[]) {
 
 
 export function tileFileName(tile: Tile) {
-  if (tile <= 8) return `${tile + 1}m.svg`;
-  if (tile <= 17) return `${tile - 8}p.svg`;
-  if (tile <= 26) return `${tile - 17}s.svg`;
-  const honors = ["east.svg", "south.svg", "west.svg", "north.svg", "haku.svg", "hatsu.svg", "chun.svg"];
+  if (tile <= 8) return `${tile + 1}m.jpg`;
+  if (tile <= 17) return `${tile - 8}p.jpg`;
+  if (tile <= 26) return `${tile - 17}s.jpg`;
+  const honors = ["east.jpg", "south.jpg", "west.jpg", "north.jpg", "white.jpg", "green.jpg", "red.jpg"];
   return honors[tile - 27];
 }
 
 export function tileImagePath(tile: Tile) {
-  return `/tiles/Regular/${tileFileName(tile)}`;
+  const base = (typeof import.meta !== "undefined" && (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL) || "/";
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  return `${normalizedBase}tiles/Regular/${tileFileName(tile)}`;
+}
 
+
+export function isWinningHand(hand: Tile[]): boolean {
+  if (hand.length !== 14) return false;
+  const counts = toCounts(hand);
+
+  let pairs = 0;
+  let uniq = 0;
+  for (const c of counts) {
+    if (c > 0) uniq++;
+    if (c >= 2) pairs++;
+  }
+  if (pairs === 7 && uniq === 7) return true;
+
+  for (let i = 0; i < 34; i++) {
+    if (counts[i] < 2) continue;
+    const work = counts.slice();
+    work[i] -= 2;
+    if (canFormMelds(work)) return true;
+  }
+  return false;
+}
+
+function canFormMelds(counts: number[]): boolean {
+  let i = counts.findIndex((c) => c > 0);
+  if (i === -1) return true;
+
+  if (counts[i] >= 3) {
+    counts[i] -= 3;
+    if (canFormMelds(counts)) return true;
+    counts[i] += 3;
+  }
+
+  if (i <= 26 && i % 9 <= 6 && counts[i + 1] > 0 && counts[i + 2] > 0) {
+    counts[i]--; counts[i + 1]--; counts[i + 2]--;
+    if (canFormMelds(counts)) return true;
+    counts[i]++; counts[i + 1]++; counts[i + 2]++;
+  }
+  return false;
 }
