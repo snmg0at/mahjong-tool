@@ -153,8 +153,10 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
   const baseC = shantenChiitoi(base13);
   const baseBest = Math.min(baseM, baseC);
 
+
   let bestKinds = 0;
   let bestCount = 0;
+
   let cKinds = 0;
   let cCount = 0;
 
@@ -247,6 +249,7 @@ export function isWinningHand(hand: Tile[]): boolean {
 function canFormMelds(counts: number[]): boolean {
   let i = counts.findIndex((c) => c > 0);
   if (i === -1) return true;
+
 
   if (counts[i] >= 3) {
     counts[i] -= 3;
