@@ -30,6 +30,28 @@ export function toCounts(hand: Tile[]) {
   return c;
 }
 
+
+export type MentsuStructure = {
+  blocks: number;
+  hasPair: boolean;
+  shantenMentsuOnly: number;
+};
+
+/**
+ * Skeleton classifier for advanced mentsu-structure modes.
+ * NOTE: Step1 only adds the interface/foundation; strict classification
+ * will be implemented in a later step.
+ */
+export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
+  const counts = toCounts(hand);
+  const hasPair = counts.some((c) => c >= 2);
+
+  return {
+    blocks: 0,
+    hasPair,
+    shantenMentsuOnly: shantenMentsu(hand),
+  };
+}
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
   let best = 8;

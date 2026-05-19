@@ -116,6 +116,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
     const cur = calcUkeireForDiscard(fullHand, idx);
     nextState.lastReview = { discard, mentsuKinds: cur.mentsuKinds, mentsuCount: cur.mentsuCount, top3 };
 
+
     if (shantenMentsu(next13) === 0 || shantenChiitoi(next13) === 0) {
       nextState.resultMsg = "聴牌";
       nextState.gameEnded = true;
