@@ -89,6 +89,22 @@ export default function Home() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
+
+  const wall = current?.wall ?? [];
+  const hand13 = current?.hand13 ?? [];
+  const drawTile = current?.drawTile ?? null;
+  const river = current?.river ?? [];
+  const turn = current?.turn ?? 1;
+  const resultMsg = current?.resultMsg ?? "";
+  const gameEnded = current?.gameEnded ?? false;
+
+  const fullHand = useMemo(() => {
+    if (current == null) return [] as Tile[];
+    const base = [...hand13];
+    if (drawTile != null) base.push(drawTile);
+    return base;
+  }, [current, hand13, drawTile]);
+
   if (mode == null || current == null) {
     return (
       <main style={{ maxWidth: 920, margin: "8px auto", padding: "0 8px", color: "#f5f5f5", fontFamily: "sans-serif" }}>
@@ -100,10 +116,6 @@ export default function Home() {
       </main>
     );
   }
-
-
-  const { wall, hand13, drawTile, river, turn, resultMsg, gameEnded } = current;
-  const fullHand = useMemo(() => { const base = [...hand13]; if (drawTile != null) base.push(drawTile); return base; }, [hand13, drawTile]);
   const shantenM = useMemo(() => shantenMentsu(fullHand), [fullHand]);
   const shantenC = useMemo(() => shantenChiitoi(fullHand), [fullHand]);
   const goodRate = stats.totalMoves ? Math.round((stats.goodMoves / stats.totalMoves) * 100) : 0;
