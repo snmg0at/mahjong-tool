@@ -6,7 +6,9 @@ import {
   makeWall,
   shantenChiitoi,
   shantenMentsu,
+
   classifyMentsuStructure,
+
   sortTiles,
   TILE_LABELS,
   tileImagePath,
@@ -53,6 +55,45 @@ function createGameState(mode: Mode): GameState {
   return fromRandomDeal();
 }
 
+
+type Mode = "random" | "twoShanten" | "fiveBlockWithPair" | "fourBlockWithPair" | "fiveBlockNoPair" | "twoShantenFiveBlock" | "twoShantenFourBlock" | "twoShantenNoPair";
+
+type Stats = { totalGames: number; wins: number; goodMoves: number; totalMoves: number };
+type ReviewItem = { tile: Tile; mKinds: number; mCount: number; nextShanten: number; score: number };
+type LastDiscardReview = { discard: Tile; mentsuKinds: number; mentsuCount: number; top3: ReviewItem[] };
+type GameState = { wall: Tile[]; hand13: Tile[]; drawTile: Tile | null; river: Tile[]; turn: number; resultMsg: string; gameEnded: boolean; lastReview: LastDiscardReview | null };
+
+function createGameState(mode: Mode): GameState {
+
+  const fromRandomDeal = (): GameState => {
+    const w = makeWall(); const hand13 = w.splice(w.length - 13, 13).sort(sortTiles); const draw = w.pop();
+    return { wall: w, hand13, drawTile: draw ?? null, river: [], turn: 1, resultMsg: "", gameEnded: false, lastReview: null };
+  };
+
+  const matchesMode = (fullHand: Tile[]): boolean => {
+    const m = classifyMentsuStructure(fullHand);
+    const minShanten = Math.min(shantenMentsu(fullHand), shantenChiitoi(fullHand));
+    if (mode === "twoShanten") return minShanten === 2;
+    if (mode === "fiveBlockWithPair") return m.blocks === 5 && m.hasPair;
+    if (mode === "fourBlockWithPair") return m.blocks === 4 && m.hasPair;
+    if (mode === "fiveBlockNoPair") return m.blocks === 5 && !m.hasPair;
+    if (mode === "twoShantenFiveBlock") return minShanten === 2 && m.blocks === 5;
+    if (mode === "twoShantenFourBlock") return minShanten === 2 && m.blocks === 4;
+    if (mode === "twoShantenNoPair") return minShanten === 2 && !m.hasPair;
+    return true;
+  };
+
+  if (mode === "random") return fromRandomDeal();
+
+  for (let i = 0; i < 8000; i++) {
+    const state = fromRandomDeal();
+    if (state.drawTile == null) continue;
+    if (matchesMode([...state.hand13, state.drawTile])) return state;
+  }
+  return fromRandomDeal();
+}
+
+
 function breaksCompletedMeldShape(base13: Tile[], discard: Tile): boolean {
   const c = toCounts(base13);
   if (discard <= 26 && c[discard] >= 2) return true;
@@ -62,35 +103,42 @@ function breaksCompletedMeldShape(base13: Tile[], discard: Tile): boolean {
     if (discard % 9 >= 2 && c[discard - 1] > 0 && c[discard - 2] > 0) return true;
   }
   return false;
+
 }
 
 export default function Home() {
   const [mode, setMode] = useState<Mode | null>(null);
+
   if (mode == null) {
     return <main style={{ maxWidth: 920, margin: "8px auto", padding: "0 8px", color: "#f5f5f5", fontFamily: "sans-serif" }}><h1 style={{ fontSize: 22 }}>麻雀 牌効率ゲーム</h1><div style={{ display: "grid", gap: 12 }}><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>通常</h2><button onClick={() => setMode("random")} style={{ padding: "12px", fontWeight: 700 }}>通常配牌モード</button><button onClick={() => setMode("twoShanten")} style={{ padding: "12px", fontWeight: 700 }}>二向聴チャレンジ</button></section><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>上級</h2><button onClick={() => setMode("fiveBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭あり</button><button onClick={() => setMode("fourBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>4ブロック雀頭あり</button><button onClick={() => setMode("fiveBlockNoPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭なし</button><button onClick={() => setMode("twoShantenFiveBlock")} style={{ padding: "12px", fontWeight: 700 }}>2シャンテン5ブロック</button><button onClick={() => setMode("twoShantenFourBlock")} style={{ padding: "12px", fontWeight: 700 }}>2シャンテン4ブロック</button><button onClick={() => setMode("twoShantenNoPair")} style={{ padding: "12px", fontWeight: 700 }}>2シャンテン雀頭なし</button></section></div></main>;
+
   }
   return <GameScreen mode={mode} onBackToMenu={() => setMode(null)} />;
 }
 
 function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => void }) {
   const [current, setCurrent] = useState<GameState>(() => createGameState(mode));
+
   const [undoStack, setUndoStack] = useState<GameState[]>([]);
   const [redoStack, setRedoStack] = useState<GameState[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [selectedUke, setSelectedUke] = useState<UkeireResult | null>(null);
   const [selectedWaitInfo, setSelectedWaitInfo] = useState<{ labels: string[]; total: number } | null>(null);
   const [undoDiffMsg, setUndoDiffMsg] = useState("");
+
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
   const isMini = typeof window !== "undefined" && window.innerHeight <= 740;
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
 
   const { wall, hand13, drawTile, river, turn, resultMsg, gameEnded, lastReview } = current;
+
   const fullHand = useMemo(() => { const b = [...hand13]; if (drawTile != null) b.push(drawTile); return b; }, [hand13, drawTile]);
   const shantenM = useMemo(() => shantenMentsu(fullHand), [fullHand]);
   const shantenC = useMemo(() => (isAdvancedMode(mode) ? null : shantenChiitoi(fullHand)), [fullHand, mode]);
   const goodRate = stats.totalMoves ? Math.round((stats.goodMoves / stats.totalMoves) * 100) : 0;
   const selectedNext13 = selectedIdx != null ? handWithoutIndex(fullHand, selectedIdx).sort(sortTiles) : null;
   const previewShantenM = selectedNext13 ? shantenMentsu(selectedNext13) : shantenM;
+
   const previewShantenC = shantenC == null ? null : (selectedNext13 ? shantenChiitoi(selectedNext13) : shantenC);
   const isMentsuShantenBack = selectedIdx != null && previewShantenM > shantenM;
   const shantenCLabel = previewShantenC == null ? "---" : (selectedIdx != null ? `${shantenC} → ${previewShantenC}` : String(shantenC));
@@ -126,9 +174,11 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
     const next13 = handWithoutIndex(fullHand, idx).sort(sortTiles);
     const nextState: GameState = { ...current, river: [...river, discard], hand13: next13, drawTile: null };
 
+
     const top3 = [...all].sort((a, b) => b.score - a.score || b.mCount - a.mCount || b.mKinds - a.mKinds).slice(0, 3);
     const cur = calcUkeireForDiscard(fullHand, idx);
     nextState.lastReview = { discard, mentsuKinds: cur.mentsuKinds, mentsuCount: cur.mentsuCount, top3 };
+
 
     if (shantenMentsu(next13) === 0 || shantenChiitoi(next13) === 0) {
       nextState.resultMsg = "聴牌";
@@ -137,6 +187,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
       setUndoStack((u) => [...u, current]); setRedoStack([]); setCurrent(nextState); setUndoDiffMsg(""); resetSelections();
       return;
     }
+
 
     if (turn >= MAX_TURNS || wall.length === 0) {
       nextState.resultMsg = "流局";
@@ -163,3 +214,4 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
 function Stat({ label, value, compact = false, large = false }: { label: string; value: string; compact?: boolean; large?: boolean }) { return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: large ? 8 : compact ? 3 : 4, background: "#00552e" }}><div style={{ fontSize: large ? 11 : compact ? 7 : 8, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: large ? 18 : compact ? 10 : 11, color: "#f5f5f5" }}>{value}</div></div>; }
 function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: boolean }) { return <span style={{ display: "inline-flex", width: "100%", height: "100%", borderRadius: compact ? 0 : 6, background: "#f4f4f4", alignItems: "center", justifyContent: "flex-start", overflow: "hidden", boxSizing: "border-box", border: "1px solid #d7d7d7" }}><img src={tileImagePath(tile)} alt={TILE_LABELS[tile]} width={44} height={60} style={{ display: "block", pointerEvents: "none", width: "auto", height: "100%", maxWidth: "100%", objectFit: "contain", objectPosition: "center", margin: "0 auto" }} onError={(e) => { e.currentTarget.style.display = "none"; const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = "inline"; }} /><span style={{ display: "none", color: "#102218", fontSize: 12, fontWeight: 700 }}>{TILE_LABELS[tile]}</span></span>; }
 function River({ river, fixedHeight, compact = false, desktop = false }: { river: Tile[]; fixedHeight?: number; compact?: boolean; desktop?: boolean }) { const rows: Tile[][] = []; for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6)); return <div style={{ borderRadius: 8, padding: compact ? 3 : 10, height: fixedHeight ?? 120, marginBottom: 0, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "flex-start", overflowY: "auto" }}>{rows.length === 0 ? <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div> : rows.map((row, rIdx) => <div key={rIdx} style={{ display: "flex", gap: compact ? 2 : 8, marginBottom: compact ? 2 : 6, justifyContent: "flex-start" }}>{row.map((t, i) => <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: desktop ? 36 : compact ? 16 : 32, height: desktop ? 52 : compact ? 22 : 46 }}><MahjongTileFace tile={t} /></span>)}</div>)}</div>; }
+
