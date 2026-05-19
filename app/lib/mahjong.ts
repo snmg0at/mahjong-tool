@@ -30,6 +30,28 @@ export function toCounts(hand: Tile[]) {
   return c;
 }
 
+
+export type MentsuStructure = {
+  blocks: number;
+  hasPair: boolean;
+  shantenMentsuOnly: number;
+};
+
+/**
+ * Skeleton classifier for advanced mentsu-structure modes.
+ * NOTE: Step1 only adds the interface/foundation; strict classification
+ * will be implemented in a later step.
+ */
+export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
+  const counts = toCounts(hand);
+  const hasPair = counts.some((c) => c >= 2);
+
+  return {
+    blocks: 0,
+    hasPair,
+    shantenMentsuOnly: shantenMentsu(hand),
+  };
+}
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
   let best = 8;
@@ -151,11 +173,8 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
   const baseM = shantenMentsu(base13);
   const baseC = shantenChiitoi(base13);
-  const baseBest = Math.min(baseM, baseC);
-
-
-  let bestKinds = 0;
-  let bestCount = 0;
+  let mKinds = 0;
+  let mCount = 0;
 
   let cKinds = 0;
   let cCount = 0;
@@ -167,11 +186,9 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
     const m = shantenMentsu(next);
     const c = shantenChiitoi(next);
-    const best = Math.min(m, c);
-
-    if (best < baseBest) {
-      bestKinds++;
-      bestCount += rem;
+    if (m < baseM) {
+      mKinds++;
+      mCount += rem;
     }
 
     if (c < baseC) {
@@ -180,7 +197,7 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
     }
   }
 
-  return { mentsuKinds: bestKinds, mentsuCount: bestCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
+  return { mentsuKinds: mKinds, mentsuCount: mCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
 }
 
 export function evaluatePathWeight(hand: Tile[]) {
