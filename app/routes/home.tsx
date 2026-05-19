@@ -14,6 +14,7 @@ import {
 } from "../lib/mahjong";
 
 const MAX_TURNS = 18;
+const MOBILE_BREAKPOINT = 640;
 
 type Mode = "random" | "twoShanten";
 
@@ -29,6 +30,7 @@ type GameState = {
   resultMsg: string;
   gameEnded: boolean;
 };
+
 
 function createGameState(mode: Mode): GameState {
   if (mode === "random") {
@@ -54,14 +56,17 @@ function createGameState(mode: Mode): GameState {
 export default function Home() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [current, setCurrent] = useState<GameState | null>(null);
+
   const [undoStack, setUndoStack] = useState<GameState[]>([]);
   const [redoStack, setRedoStack] = useState<GameState[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [selectedUke, setSelectedUke] = useState<UkeireResult | null>(null);
   const [selectedWaitInfo, setSelectedWaitInfo] = useState<{ labels: string[]; total: number } | null>(null);
   const [undoDiffMsg, setUndoDiffMsg] = useState("");
+
   const [lastReview, setLastReview] = useState<LastDiscardReview | null>(null);
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
+
 
   if (mode == null || current == null) {
     return (
@@ -80,20 +85,24 @@ export default function Home() {
   const shantenM = useMemo(() => shantenMentsu(fullHand), [fullHand]);
   const shantenC = useMemo(() => shantenChiitoi(fullHand), [fullHand]);
   const goodRate = stats.totalMoves ? Math.round((stats.goodMoves / stats.totalMoves) * 100) : 0;
+
   const selectedNext13 = selectedIdx != null ? handWithoutIndex(fullHand, selectedIdx).sort(sortTiles) : null;
   const previewShantenM = selectedNext13 ? shantenMentsu(selectedNext13) : shantenM;
   const previewShantenC = selectedNext13 ? shantenChiitoi(selectedNext13) : shantenC;
   const isMentsuShantenBack = selectedIdx != null && previewShantenM > shantenM;
 
+
   function resetSelections() { setSelectedIdx(null); setSelectedUke(null); setSelectedWaitInfo(null); }
   function startNextGame() {
     setCurrent(createGameState(mode)); setUndoStack([]); setRedoStack([]); resetSelections(); setUndoDiffMsg(""); setLastReview(null);
   }
+
   function calcWaitInfoForDiscard(hand14: Tile[], discardIdx: number) {
     const next13 = handWithoutIndex(hand14, discardIdx).sort(sortTiles);
     const waits: Tile[] = [];
     for (let t = 0; t < 34; t++) if (isWinningHand([...next13, t])) waits.push(t);
     if (waits.length === 0) return null;
+
     const counts = Array(34).fill(0); for (const t of next13) counts[t]++;
     let total = 0; for (const t of waits) total += Math.max(0, 4 - counts[t]);
     return { labels: waits.map((t) => TILE_LABELS[t]), total };
@@ -105,6 +114,7 @@ export default function Home() {
   function onTileClick(idx: number) {
     if (gameEnded) return;
     if (selectedIdx !== idx) { setSelectedIdx(idx); setSelectedUke(calcUkeireForDiscard(fullHand, idx)); setSelectedWaitInfo(calcWaitInfoForDiscard(fullHand, idx)); return; }
+
 
     const currentUke = calcUkeireForDiscard(fullHand, idx).mentsuCount;
     let bestUke = -1;
@@ -118,6 +128,7 @@ export default function Home() {
 
     const discard = fullHand[idx];
     const next13 = handWithoutIndex(fullHand, idx).sort(sortTiles);
+
     const nextState: GameState = { ...current, river: [...river, discard], hand13: next13, drawTile: null };
 
     const top3 = [...all].sort((a, b) => b.count - a.count).slice(0, 3);
@@ -177,6 +188,7 @@ export default function Home() {
       </div>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0,1fr))", gap: 3 }}>
+
         <Stat label="メンツ手" value={selectedIdx != null ? `${shantenM} → ${previewShantenM}` : String(shantenM)} />
         <Stat label="七対子" value={selectedIdx != null ? `${shantenC} → ${previewShantenC}` : String(shantenC)} />
         <Stat label="巡目" value={String(turn)} />
@@ -188,7 +200,9 @@ export default function Home() {
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
+
   return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 4, background: "#00552e" }}><div style={{ fontSize: 8, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 11, color: "#f5f5f5" }}>{value}</div></div>;
+
 }
 
 function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: boolean }) {
@@ -200,14 +214,18 @@ function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: bool
   );
 }
 
+
 function River({ river, fixedHeight, compact = false }: { river: Tile[]; fixedHeight?: number; compact?: boolean }) {
+
   const rows: Tile[][] = [];
   for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6));
   return (
+
     <div style={{ borderRadius: 8, padding: compact ? 4 : 8, height: fixedHeight ?? 120, marginBottom: 0, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "flex-start", overflowY: "auto" }}>
       {rows.length === 0 ? <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div> : rows.map((row, rIdx) => (
         <div key={rIdx} style={{ display: "flex", gap: compact ? 3 : 6, marginBottom: compact ? 3 : 6, justifyContent: "flex-start" }}>
           {row.map((t, i) => <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: compact ? 18 : 28, height: compact ? 26 : 40 }}><MahjongTileFace tile={t} /></span>)}
+
         </div>
       ))}
     </div>
