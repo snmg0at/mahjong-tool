@@ -104,7 +104,9 @@ export default function Home() {
     const prev = undoStack[undoStack.length - 1];
     const nowLast = current.river[current.river.length - 1];
     const prevLast = prev.river[prev.river.length - 1];
+
     setUndoDiffMsg(nowLast == null ? "" : `Undo差分: 打牌 ${TILE_LABELS[nowLast]} → ${prevLast == null ? "（打牌前）" : TILE_LABELS[prevLast]}`);
+
     setRedoStack((r) => [...r, current]);
     setUndoStack((u) => u.slice(0, -1));
     setCurrent(prev);
@@ -169,7 +171,9 @@ export default function Home() {
     <main style={{ maxWidth: 920, margin: "8px auto", fontFamily: "sans-serif", padding: "0 8px", color: "#f5f5f5", minHeight: 620, display: "grid", gridTemplateRows: "auto auto auto 1fr auto", gap: 8 }}>
       <h1 style={{ marginBottom: 0, fontSize: 22 }}>麻雀 牌効率ゲーム</h1>
 
+
       <div style={{ padding: 8, borderRadius: 8, background: "#00552e", fontSize: 13, minHeight: 96 }}>
+
         {resultMsg ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "100%" }}>
             <div style={{ fontWeight: 700, color: "#ffe082", fontSize: 20 }}>{resultMsg}</div>
@@ -178,9 +182,11 @@ export default function Home() {
         ) : (
           <>
             <div style={{ fontWeight: 700, marginBottom: 4, minHeight: 20 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div>
+
             <div style={{ minHeight: 18 }}>{selectedUke ? `メンツ手 受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚${isMentsuShantenBack ? "（シャンテン戻し）" : ""}` : ""}</div>
             <div style={{ minHeight: 18 }}>{selectedUke ? `七対子 受け入れ: ${selectedUke.chiitoiKinds}種 ${selectedUke.chiitoiCount}枚` : ""}</div>
             <div style={{ color: "#bbe7d5", marginTop: 2, minHeight: 18 }}>{selectedUke && selectedIdx != null ? (selectedWaitInfo ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）` : "同じ牌をもう一度クリックで打牌確定") : ""}</div>
+
           </>
         )}
       </div>
@@ -197,6 +203,7 @@ export default function Home() {
         </div>
       </div>
 
+
       <div>
         <div style={{ margin: "0 0 6px", fontWeight: 700 }}>手牌（13枚 + ツモ1枚）</div>
         <div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 6, minHeight: 66 }}>
@@ -211,6 +218,7 @@ export default function Home() {
             </button>
           )}
         </div>
+
       </div>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(90px,1fr))", gap: 6 }}>
@@ -242,7 +250,9 @@ function River({ river, fixedHeight }: { river: Tile[]; fixedHeight?: number }) 
   for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6));
 
   return (
+    
     <div style={{ borderRadius: 8, padding: 8, height: fixedHeight ?? 120, marginBottom: 0, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "flex-start", overflowY: "auto" }}>
+
       {rows.length === 0 ? <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div> : rows.map((row, rIdx) => (
         <div key={rIdx} style={{ display: "flex", gap: 6, marginBottom: 6, justifyContent: "flex-start" }}>
           {row.map((t, i) => <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: 28, height: 40 }}><MahjongTileFace tile={t} /></span>)}
