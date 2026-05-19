@@ -43,14 +43,74 @@ export type MentsuStructure = {
  * will be implemented in a later step.
  */
 export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
-  const counts = toCounts(hand);
-  const hasPair = counts.some((c) => c >= 2);
 
-  return {
-    blocks: 0,
-    hasPair,
-    shantenMentsuOnly: shantenMentsu(hand),
-  };
+  const c = toCounts(hand);
+  let bestBlocks = -1;
+  let bestHasPair = false;
+
+  function update(meld: number, taatsu: number, pair: number) {
+    const mm = Math.min(meld, 4);
+    const tt = Math.min(taatsu, 4 - mm);
+    const blocks = mm + tt + pair;
+    if (blocks > bestBlocks) {
+      bestBlocks = blocks;
+      bestHasPair = pair > 0;
+      return;
+    }
+    if (blocks === bestBlocks && pair > 0) bestHasPair = true;
+  }
+
+  function dfs(idx: number, meld: number, taatsu: number, pair: number) {
+    while (idx < 34 && c[idx] === 0) idx++;
+    if (idx >= 34) {
+      update(meld, taatsu, pair);
+      return;
+    }
+
+    if (c[idx] >= 3) {
+      c[idx] -= 3;
+      dfs(idx, meld + 1, taatsu, pair);
+      c[idx] += 3;
+    }
+
+    if (idx <= 26 && idx % 9 <= 6 && c[idx + 1] > 0 && c[idx + 2] > 0) {
+      c[idx]--; c[idx + 1]--; c[idx + 2]--;
+      dfs(idx, meld + 1, taatsu, pair);
+      c[idx]++; c[idx + 1]++; c[idx + 2]++;
+    }
+
+    if (pair === 0 && c[idx] >= 2) {
+      c[idx] -= 2;
+      dfs(idx, meld, taatsu, 1);
+      c[idx] += 2;
+    }
+
+    if (c[idx] >= 2) {
+      c[idx] -= 2;
+      dfs(idx, meld, taatsu + 1, pair);
+      c[idx] += 2;
+    }
+
+    if (idx <= 26 && idx % 9 <= 7 && c[idx + 1] > 0) {
+      c[idx]--; c[idx + 1]--;
+      dfs(idx, meld, taatsu + 1, pair);
+      c[idx]++; c[idx + 1]++;
+    }
+
+    if (idx <= 26 && idx % 9 <= 6 && c[idx + 2] > 0) {
+      c[idx]--; c[idx + 2]--;
+      dfs(idx, meld, taatsu + 1, pair);
+      c[idx]++; c[idx + 2]++;
+    }
+
+    c[idx]--;
+    dfs(idx, meld, taatsu, pair);
+    c[idx]++;
+  }
+
+  dfs(0, 0, 0, 0);
+  return { blocks: Math.max(0, bestBlocks), hasPair: bestHasPair, shantenMentsuOnly: shantenMentsu(hand) };
+
 }
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
