@@ -5,7 +5,6 @@ import {
   makeWall,
   shantenChiitoi,
   shantenMentsu,
-  isWinningHand,
   sortTiles,
   TILE_LABELS,
   tileImagePath,
@@ -68,12 +67,6 @@ export default function Home() {
   const previewShantenC = selectedNext13 ? shantenChiitoi(selectedNext13) : shantenC;
   const isMentsuShantenBack = selectedIdx != null && previewShantenM > shantenM;
 
-  useEffect(() => {
-
-    if (gameEnded || fullHand.length !== 14 || !isWinningHand(fullHand)) return;
-    setCurrent((s) => ({ ...s, resultMsg: "和了", gameEnded: true }));
-    setStats((s) => ({ ...s, totalGames: s.totalGames + 1, wins: s.wins + 1 }));
-  }, [fullHand, gameEnded]);
 
   function resetSelections() {
     setSelectedIdx(null);
@@ -144,6 +137,21 @@ export default function Home() {
     const next13 = handWithoutIndex(fullHand, idx).sort(sortTiles);
     const nextState: GameState = { ...current, river: [...river, discard] };
 
+
+    const isTenpai = shantenMentsu(next13) === 0 || shantenChiitoi(next13) === 0;
+    if (isTenpai) {
+      nextState.resultMsg = "聴牌";
+      nextState.gameEnded = true;
+      setStats((st) => ({ ...st, totalGames: st.totalGames + 1 }));
+      setUndoStack((u) => [...u, current]);
+      setRedoStack([]);
+      setCurrent(nextState);
+      setUndoDiffMsg("");
+      resetSelections();
+      return;
+    }
+
+
     if (turn >= MAX_TURNS || wall.length === 0) {
       nextState.resultMsg = "流局";
       nextState.gameEnded = true;
@@ -174,6 +182,7 @@ export default function Home() {
 
     <main style={{ maxWidth: 920, margin: "4px auto", fontFamily: "sans-serif", padding: "0 6px", color: "#f5f5f5", minHeight: "100svh", height: "100svh", paddingBottom: "env(safe-area-inset-bottom)", display: "grid", gridTemplateRows: "auto auto auto 1fr auto", gap: 4, overflow: "hidden" }}>
       <h1 style={{ marginBottom: 0, fontSize: 18 }}>麻雀 牌効率ゲーム</h1>
+
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, alignItems: "start", minHeight: 96 }}>
         <div>
