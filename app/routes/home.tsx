@@ -21,6 +21,13 @@ type Mode = "random" | "twoShanten";
 type Stats = { totalGames: number; wins: number; goodMoves: number; totalMoves: number };
 type LastDiscardReview = { discard: Tile; mentsuKinds: number; mentsuCount: number; top3: { tile: Tile; count: number }[] };
 
+
+type Mode = "random" | "twoShanten";
+
+type Stats = { totalGames: number; wins: number; goodMoves: number; totalMoves: number };
+type LastDiscardReview = { discard: Tile; mentsuKinds: number; mentsuCount: number; top3: { tile: Tile; count: number }[] };
+
+
 type GameState = {
   wall: Tile[];
   hand13: Tile[];
@@ -66,7 +73,7 @@ export default function Home() {
 
   const [lastReview, setLastReview] = useState<LastDiscardReview | null>(null);
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
-
+  const [isMini, setIsMini] = useState(false);
 
   if (mode == null || current == null) {
     return (
@@ -79,6 +86,14 @@ export default function Home() {
       </main>
     );
   }
+
+  useEffect(() => {
+    const update = () => setIsMini(window.innerHeight <= 740);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
 
   const { wall, hand13, drawTile, river, turn, resultMsg, gameEnded } = current;
   const fullHand = useMemo(() => { const base = [...hand13]; if (drawTile != null) base.push(drawTile); return base; }, [hand13, drawTile]);
@@ -96,7 +111,6 @@ export default function Home() {
   function startNextGame() {
     setCurrent(createGameState(mode)); setUndoStack([]); setRedoStack([]); resetSelections(); setUndoDiffMsg(""); setLastReview(null);
   }
-
   function calcWaitInfoForDiscard(hand14: Tile[], discardIdx: number) {
     const next13 = handWithoutIndex(hand14, discardIdx).sort(sortTiles);
     const waits: Tile[] = [];
@@ -154,54 +168,57 @@ export default function Home() {
   return (
     <main style={{ maxWidth: 920, margin: "4px auto", fontFamily: "sans-serif", padding: "0 6px", color: "#f5f5f5", minHeight: "100svh", height: "100svh", paddingBottom: "env(safe-area-inset-bottom)", display: "grid", gridTemplateRows: "auto auto auto auto auto", gap: 3, overflow: "hidden" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ marginBottom: 0, fontSize: 16 }}>麻雀 牌効率ゲーム</h1>
+
+        <h1 style={{ marginBottom: 0, fontSize: isMini ? 14 : 16 }}>麻雀 牌効率ゲーム</h1>
         <button onClick={startNextGame} style={{ padding: "4px 8px", fontSize: 11 }}>New Game</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, alignItems: "start", minHeight: 78 }}>
-        <River river={river} fixedHeight={74} compact />
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 10 }}>
-          <button onClick={onUndo} disabled={undoStack.length === 0} style={{ padding: "4px 8px", minWidth: 56, fontSize: 11 }}>Undo</button>
-          <button onClick={onRedo} disabled={redoStack.length === 0} style={{ padding: "4px 8px", minWidth: 56, fontSize: 11 }}>Redo</button>
-          <span style={{ color: "#bbe7d5", width: 96, fontSize: 9, lineHeight: 1.2 }}>{undoDiffMsg}</span>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, alignItems: "start", minHeight: isMini ? 68 : 78 }}>
+        <River river={river} fixedHeight={isMini ? 62 : 74} compact />
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: isMini ? 8 : 10 }}>
+          <button onClick={onUndo} disabled={undoStack.length === 0} style={{ padding: "4px 8px", minWidth: isMini ? 50 : 56, fontSize: compact ? 10 : 11 }}>Undo</button>
+          <button onClick={onRedo} disabled={redoStack.length === 0} style={{ padding: "4px 8px", minWidth: isMini ? 50 : 56, fontSize: compact ? 10 : 11 }}>Redo</button>
+          <span style={{ color: "#bbe7d5", width: isMini ? 84 : 96, fontSize: isMini ? 8 : 9, lineHeight: 1.2 }}>{undoDiffMsg}</span>
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 2, minHeight: 48 }}>
+      <div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 2, minHeight: isMini ? 44 : 48 }}>
         {fullHand.slice(0, 13).map((t, i) => (
-          <button key={`h-${t}-${i}`} onClick={() => onTileClick(i)} style={{ width: 30, height: 42, padding: 0, borderRadius: 0, outline: i === selectedIdx ? "2px solid #6cc9ff" : "none", marginRight: -1, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
+          <button key={`h-${t}-${i}`} onClick={() => onTileClick(i)} style={{ width: isMini ? 27 : 30, height: isMini ? 38 : 42, padding: 0, borderRadius: 0, outline: i === selectedIdx ? "2px solid #6cc9ff" : "none", marginRight: -1, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
             <MahjongTileFace tile={t} compact />
           </button>
         ))}
-        {fullHand[13] != null && <button key={`d-${fullHand[13]}`} onClick={() => onTileClick(13)} style={{ width: 30, height: 42, padding: 0, borderRadius: 0, outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none", marginLeft: 8, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}><MahjongTileFace tile={fullHand[13]} compact /></button>}
+        {fullHand[13] != null && <button key={`d-${fullHand[13]}`} onClick={() => onTileClick(13)} style={{ width: isMini ? 27 : 30, height: isMini ? 38 : 42, padding: 0, borderRadius: 0, outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none", marginLeft: isMini ? 6 : 8, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}><MahjongTileFace tile={fullHand[13]} compact /></button>}
       </div>
 
-      <div style={{ padding: 4, borderRadius: 8, background: "#00552e", fontSize: 9, minHeight: 70, overflow: "hidden" }}>
-        {resultMsg ? <div style={{ fontWeight: 700, color: "#ffe082", fontSize: 14 }}>{resultMsg}</div> : null}
-        <div style={{ minHeight: 12 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div>
-        <div style={{ minHeight: 12 }}>{selectedUke ? `メンツ手 受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚${isMentsuShantenBack ? "（シャンテン戻し）" : ""}` : ""}</div>
-        <div style={{ minHeight: 12 }}>{selectedUke ? `七対子 受け入れ: ${selectedUke.chiitoiKinds}種 ${selectedUke.chiitoiCount}枚` : ""}</div>
-        <div style={{ color: "#bbe7d5", minHeight: 12 }}>{selectedUke && selectedIdx != null ? (selectedWaitInfo ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）` : "同じ牌をもう一度クリックで打牌確定") : ""}</div>
-        <div style={{ color: "#ffe082", minHeight: 12 }}>
+      <div style={{ padding: isMini ? 3 : 4, borderRadius: 8, background: "#00552e", fontSize: isMini ? 8 : 9, minHeight: isMini ? 60 : 70, overflow: "hidden" }}>
+        {resultMsg ? <div style={{ fontWeight: 700, color: "#ffe082", fontSize: isMini ? 12 : 14 }}>{resultMsg}</div> : null}
+        <div style={{ minHeight: isMini ? 10 : 12 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div>
+        <div style={{ minHeight: isMini ? 10 : 12 }}>{selectedUke ? `メンツ手 受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚${isMentsuShantenBack ? "（シャンテン戻し）" : ""}` : ""}</div>
+        <div style={{ minHeight: isMini ? 10 : 12 }}>{selectedUke ? `七対子 受け入れ: ${selectedUke.chiitoiKinds}種 ${selectedUke.chiitoiCount}枚` : ""}</div>
+        <div style={{ color: "#bbe7d5", minHeight: isMini ? 10 : 12 }}>{selectedUke && selectedIdx != null ? (selectedWaitInfo ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）` : "同じ牌をもう一度クリックで打牌確定") : ""}</div>
+        <div style={{ color: "#ffe082", minHeight: isMini ? 10 : 12 }}>
+
           {lastReview ? `直前打牌評価: ${TILE_LABELS[lastReview.discard]} / ${lastReview.mentsuKinds}種${lastReview.mentsuCount}枚 / Top3 ${lastReview.top3.map((x, i) => `${i + 1}.${TILE_LABELS[x.tile]}:${x.count}`).join(" ")}` : ""}
         </div>
       </div>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0,1fr))", gap: 3 }}>
 
-        <Stat label="メンツ手" value={selectedIdx != null ? `${shantenM} → ${previewShantenM}` : String(shantenM)} />
-        <Stat label="七対子" value={selectedIdx != null ? `${shantenC} → ${previewShantenC}` : String(shantenC)} />
-        <Stat label="巡目" value={String(turn)} />
-        <Stat label="良打率" value={`${goodRate}%`} />
-        <Stat label="勝利/総数" value={`${stats.wins}/${stats.totalGames}`} />
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0,1fr))", gap: isMini ? 2 : 3 }}>
+        <Stat compact={isMini} label="メンツ手" value={selectedIdx != null ? `${shantenM} → ${previewShantenM}` : String(shantenM)} />
+        <Stat compact={isMini} label="七対子" value={selectedIdx != null ? `${shantenC} → ${previewShantenC}` : String(shantenC)} />
+        <Stat compact={isMini} label="巡目" value={String(turn)} />
+        <Stat compact={isMini} label="良打率" value={`${goodRate}%`} />
+        <Stat compact={isMini} label="勝利/総数" value={`${stats.wins}/${stats.totalGames}`} />
+
       </section>
     </main>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
 
-  return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 4, background: "#00552e" }}><div style={{ fontSize: 8, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 11, color: "#f5f5f5" }}>{value}</div></div>;
+function Stat({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
+  return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: compact ? 3 : 4, background: "#00552e" }}><div style={{ fontSize: compact ? 7 : 8, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: compact ? 10 : 11, color: "#f5f5f5" }}>{value}</div></div>;
 
 }
 
@@ -216,15 +233,13 @@ function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: bool
 
 
 function River({ river, fixedHeight, compact = false }: { river: Tile[]; fixedHeight?: number; compact?: boolean }) {
-
   const rows: Tile[][] = [];
   for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6));
   return (
-
-    <div style={{ borderRadius: 8, padding: compact ? 4 : 8, height: fixedHeight ?? 120, marginBottom: 0, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "flex-start", overflowY: "auto" }}>
+    <div style={{ borderRadius: 8, padding: compact ? 3 : 8, height: fixedHeight ?? 120, marginBottom: 0, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "flex-start", overflowY: "auto" }}>
       {rows.length === 0 ? <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div> : rows.map((row, rIdx) => (
-        <div key={rIdx} style={{ display: "flex", gap: compact ? 3 : 6, marginBottom: compact ? 3 : 6, justifyContent: "flex-start" }}>
-          {row.map((t, i) => <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: compact ? 18 : 28, height: compact ? 26 : 40 }}><MahjongTileFace tile={t} /></span>)}
+        <div key={rIdx} style={{ display: "flex", gap: compact ? 2 : 6, marginBottom: compact ? 2 : 6, justifyContent: "flex-start" }}>
+          {row.map((t, i) => <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: compact ? 16 : 28, height: compact ? 22 : 40 }}><MahjongTileFace tile={t} /></span>)}
 
         </div>
       ))}
