@@ -28,6 +28,13 @@ type Stats = { totalGames: number; wins: number; goodMoves: number; totalMoves: 
 type LastDiscardReview = { discard: Tile; mentsuKinds: number; mentsuCount: number; top3: { tile: Tile; count: number }[] };
 
 
+
+type Mode = "random" | "twoShanten";
+
+type Stats = { totalGames: number; wins: number; goodMoves: number; totalMoves: number };
+type LastDiscardReview = { discard: Tile; mentsuKinds: number; mentsuCount: number; top3: { tile: Tile; count: number }[] };
+
+
 type GameState = {
   wall: Tile[];
   hand13: Tile[];
@@ -75,6 +82,13 @@ export default function Home() {
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
   const [isMini, setIsMini] = useState(false);
 
+  useEffect(() => {
+    const update = () => setIsMini(window.innerHeight <= 740);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   if (mode == null || current == null) {
     return (
       <main style={{ maxWidth: 920, margin: "8px auto", padding: "0 8px", color: "#f5f5f5", fontFamily: "sans-serif" }}>
@@ -86,13 +100,6 @@ export default function Home() {
       </main>
     );
   }
-
-  useEffect(() => {
-    const update = () => setIsMini(window.innerHeight <= 740);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
 
 
   const { wall, hand13, drawTile, river, turn, resultMsg, gameEnded } = current;
