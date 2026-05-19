@@ -175,6 +175,35 @@ export default function Home() {
     <main style={{ maxWidth: 920, margin: "4px auto", fontFamily: "sans-serif", padding: "0 6px", color: "#f5f5f5", minHeight: "100svh", height: "100svh", paddingBottom: "env(safe-area-inset-bottom)", display: "grid", gridTemplateRows: "auto auto auto 1fr auto", gap: 4, overflow: "hidden" }}>
       <h1 style={{ marginBottom: 0, fontSize: 18 }}>麻雀 牌効率ゲーム</h1>
 
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, alignItems: "start", minHeight: 96 }}>
+        <div>
+          <div style={{ marginBottom: 4, fontWeight: 700, fontSize: 14 }}>河（6枚ずつ）</div>
+          <River river={river} fixedHeight={92} compact />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 22 }}>
+          <button onClick={onUndo} disabled={undoStack.length === 0} style={{ padding: "4px 8px", minWidth: 62, fontSize: 12 }}>Undo</button>
+          <button onClick={onRedo} disabled={redoStack.length === 0} style={{ padding: "4px 8px", minWidth: 62, fontSize: 12 }}>Redo</button>
+          <span style={{ color: "#bbe7d5", width: 120, fontSize: 10, lineHeight: 1.2 }}>{undoDiffMsg}</span>
+        </div>
+      </div>
+
+      <div>
+        <div style={{ margin: "0 0 4px", fontWeight: 700, fontSize: 14 }}>手牌（13枚 + ツモ1枚）</div>
+        <div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 4, minHeight: 56 }}>
+          {fullHand.slice(0, 13).map((t, i) => (
+            <button key={`h-${t}-${i}`} onClick={() => onTileClick(i)} style={{ width: 34, height: 48, padding: 0, borderRadius: 0, outline: i === selectedIdx ? "2px solid #6cc9ff" : "none", marginRight: -1, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
+              <MahjongTileFace tile={t} compact />
+            </button>
+          ))}
+          {fullHand[13] != null && (
+            <button key={`d-${fullHand[13]}`} onClick={() => onTileClick(13)} style={{ width: 34, height: 48, padding: 0, borderRadius: 0, outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none", marginLeft: 10, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
+              <MahjongTileFace tile={fullHand[13]} compact />
+            </button>
+          )}
+        </div>
+      </div>
+
+
       <div style={{ padding: 6, borderRadius: 8, background: "#00552e", fontSize: 11, minHeight: 78, overflow: "hidden" }}>
         {resultMsg ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "100%" }}>
@@ -192,40 +221,6 @@ export default function Home() {
 
           </>
         )}
-      </div>
-
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, alignItems: "start", minHeight: 96 }}>
-        <div>
-          <div style={{ marginBottom: 4, fontWeight: 700, fontSize: 14 }}>河（6枚ずつ）</div>
-          <River river={river} fixedHeight={92} compact />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 22 }}>
-          <button onClick={onUndo} disabled={undoStack.length === 0} style={{ padding: "4px 8px", minWidth: 62, fontSize: 12 }}>Undo</button>
-          <button onClick={onRedo} disabled={redoStack.length === 0} style={{ padding: "4px 8px", minWidth: 62, fontSize: 12 }}>Redo</button>
-          <span style={{ color: "#bbe7d5", width: 120, fontSize: 10, lineHeight: 1.2 }}>{undoDiffMsg}</span>
-
-        </div>
-      </div>
-
-      <div>
-
-        <div style={{ margin: "0 0 4px", fontWeight: 700, fontSize: 14 }}>手牌（13枚 + ツモ1枚）</div>
-        <div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 4, minHeight: 56 }}>
-          {fullHand.slice(0, 13).map((t, i) => (
-            <button key={`h-${t}-${i}`} onClick={() => onTileClick(i)} style={{ width: 34, height: 48, padding: 0, borderRadius: 0, outline: i === selectedIdx ? "2px solid #6cc9ff" : "none", marginRight: -1, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
-
-              <MahjongTileFace tile={t} compact />
-            </button>
-          ))}
-          {fullHand[13] != null && (
-
-            <button key={`d-${fullHand[13]}`} onClick={() => onTileClick(13)} style={{ width: 34, height: 48, padding: 0, borderRadius: 0, outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none", marginLeft: 10, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
-
-              <MahjongTileFace tile={fullHand[13]} compact />
-            </button>
-          )}
-        </div>
       </div>
 
 
