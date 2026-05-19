@@ -151,11 +151,8 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
   const baseM = shantenMentsu(base13);
   const baseC = shantenChiitoi(base13);
-  const baseBest = Math.min(baseM, baseC);
-
-
-  let bestKinds = 0;
-  let bestCount = 0;
+  let mKinds = 0;
+  let mCount = 0;
 
   let cKinds = 0;
   let cCount = 0;
@@ -167,11 +164,9 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
     const m = shantenMentsu(next);
     const c = shantenChiitoi(next);
-    const best = Math.min(m, c);
-
-    if (best < baseBest) {
-      bestKinds++;
-      bestCount += rem;
+    if (m < baseM) {
+      mKinds++;
+      mCount += rem;
     }
 
     if (c < baseC) {
@@ -180,7 +175,7 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
     }
   }
 
-  return { mentsuKinds: bestKinds, mentsuCount: bestCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
+  return { mentsuKinds: mKinds, mentsuCount: mCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
 }
 
 export function evaluatePathWeight(hand: Tile[]) {
