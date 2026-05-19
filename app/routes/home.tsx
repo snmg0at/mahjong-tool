@@ -35,8 +35,18 @@ const ADVANCED_MODES: Mode[] = [
   "twoShantenFourBlock",
   "twoShantenNoPair",
 ];
-
 const isAdvancedMode = (mode: Mode): boolean => ADVANCED_MODES.includes(mode);
+
+const modeLabel = (mode: Mode): string => {
+  if (mode === "random") return "通常配牌モード";
+  if (mode === "twoShanten") return "二向聴チャレンジ";
+  if (mode === "fiveBlockWithPair") return "5ブロック雀頭あり";
+  if (mode === "fourBlockWithPair") return "4ブロック雀頭あり";
+  if (mode === "fiveBlockNoPair") return "5ブロック雀頭なし";
+  if (mode === "twoShantenFiveBlock") return "二向聴5ブロック";
+  if (mode === "twoShantenFourBlock") return "二向聴4ブロック";
+  return "二向聴雀頭なし";
+};
 
 type Stats = { totalGames: number; wins: number; goodMoves: number; totalMoves: number };
 type ReviewItem = { tile: Tile; mKinds: number; mCount: number; nextShanten: number; score: number };
@@ -63,13 +73,17 @@ function createGameState(mode: Mode): GameState {
   const matchesMode = (fullHand: Tile[]): boolean => {
     const m = classifyMentsuStructure(fullHand);
     const minShanten = Math.min(shantenMentsu(fullHand), shantenChiitoi(fullHand));
+
     if (mode === "twoShanten") return minShanten === 2;
     if (mode === "fiveBlockWithPair") return m.blocks === 5 && m.hasPair;
     if (mode === "fourBlockWithPair") return m.blocks === 4 && m.hasPair;
     if (mode === "fiveBlockNoPair") return m.blocks === 5 && !m.hasPair;
-    if (mode === "twoShantenFiveBlock") return minShanten === 2 && m.blocks === 5;
-    if (mode === "twoShantenFourBlock") return minShanten === 2 && m.blocks === 4;
-    if (mode === "twoShantenNoPair") return minShanten === 2 && !m.hasPair;
+
+    // ここは要件どおり「メンツ手として二向聴」を厳密採用
+    if (mode === "twoShantenFiveBlock") return m.shantenMentsuOnly === 2 && m.blocks === 5 && m.hasPair;
+    if (mode === "twoShantenFourBlock") return m.shantenMentsuOnly === 2 && m.blocks === 4 && m.hasPair;
+    if (mode === "twoShantenNoPair") return m.shantenMentsuOnly === 2 && !m.hasPair;
+
     return true;
   };
 
@@ -112,9 +126,9 @@ export default function Home() {
             <button onClick={() => setMode("fiveBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭あり</button>
             <button onClick={() => setMode("fourBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>4ブロック雀頭あり</button>
             <button onClick={() => setMode("fiveBlockNoPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭なし</button>
-            <button onClick={() => setMode("twoShantenFiveBlock")} style={{ padding: "12px", fontWeight: 700 }}>2シャンテン5ブロック</button>
-            <button onClick={() => setMode("twoShantenFourBlock")} style={{ padding: "12px", fontWeight: 700 }}>2シャンテン4ブロック</button>
-            <button onClick={() => setMode("twoShantenNoPair")} style={{ padding: "12px", fontWeight: 700 }}>2シャンテン雀頭なし</button>
+            <button onClick={() => setMode("twoShantenFiveBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴5ブロック</button>
+            <button onClick={() => setMode("twoShantenFourBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴4ブロック</button>
+            <button onClick={() => setMode("twoShantenNoPair")} style={{ padding: "12px", fontWeight: 700 }}>二向聴雀頭なし</button>
           </section>
         </div>
       </main>
@@ -133,6 +147,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
   const [selectedWaitInfo, setSelectedWaitInfo] = useState<{ labels: string[]; total: number } | null>(null);
   const [undoDiffMsg, setUndoDiffMsg] = useState("");
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
+
   const isMini = typeof window !== "undefined" && window.innerHeight <= 740;
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
 
@@ -148,28 +163,19 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
   const goodRate = stats.totalMoves ? Math.round((stats.goodMoves / stats.totalMoves) * 100) : 0;
   const selectedNext13 = selectedIdx != null ? handWithoutIndex(fullHand, selectedIdx).sort(sortTiles) : null;
   const previewShantenM = selectedNext13 ? shantenMentsu(selectedNext13) : shantenM;
-  const previewShantenC = shantenC == null ? null : selectedNext13 ? shantenChiitoi(selectedNext13) : shantenC;
+  const previewShantenC = shantenC == null ? null : (selectedNext13 ? shantenChiitoi(selectedNext13) : shantenC);
   const isMentsuShantenBack = selectedIdx != null && previewShantenM > shantenM;
-  const shantenCLabel = previewShantenC == null ? "---" : selectedIdx != null ? `${shantenC} → ${previewShantenC}` : String(shantenC);
+  const shantenCLabel = previewShantenC == null ? "---" : (selectedIdx != null ? `${shantenC} → ${previewShantenC}` : String(shantenC));
 
-  const resetSelections = () => {
-    setSelectedIdx(null);
-    setSelectedUke(null);
-    setSelectedWaitInfo(null);
-  };
-  const startNextGame = () => {
-    setCurrent(createGameState(mode));
-    setUndoStack([]);
-    setRedoStack([]);
-    resetSelections();
-    setUndoDiffMsg("");
-  };
+  const resetSelections = () => { setSelectedIdx(null); setSelectedUke(null); setSelectedWaitInfo(null); };
+  const startNextGame = () => { setCurrent(createGameState(mode)); setUndoStack([]); setRedoStack([]); resetSelections(); setUndoDiffMsg(""); };
 
   const calcWaitInfoForDiscard = (hand14: Tile[], discardIdx: number) => {
     const next13 = handWithoutIndex(hand14, discardIdx).sort(sortTiles);
     const waits: Tile[] = [];
     for (let t = 0; t < 34; t++) if (isWinningHand([...next13, t])) waits.push(t);
     if (waits.length === 0) return null;
+
     const counts = Array(34).fill(0);
     for (const t of next13) counts[t]++;
     let total = 0;
@@ -201,6 +207,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
 
   const onTileClick = (idx: number) => {
     if (gameEnded) return;
+
     if (selectedIdx !== idx) {
       setSelectedIdx(idx);
       setSelectedUke(calcUkeireForDiscard(fullHand, idx));
@@ -211,6 +218,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
     const currentUke = calcUkeireForDiscard(fullHand, idx).mentsuCount;
     let bestUke = -1;
     const all: ReviewItem[] = [];
+
     for (let i = 0; i < fullHand.length; i++) {
       const discard = fullHand[i];
       const base13 = handWithoutIndex(fullHand, i).sort(sortTiles);
@@ -261,6 +269,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
         nextState.turn = turn + 1;
       }
     }
+
     setUndoStack((u) => [...u, current]);
     setRedoStack([]);
     setCurrent(nextState);
@@ -271,7 +280,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
   return (
     <main style={{ maxWidth: 920, margin: "4px auto", fontFamily: "sans-serif", padding: "0 6px", color: "#f5f5f5", minHeight: "100svh", height: "100svh", paddingBottom: "env(safe-area-inset-bottom)", display: "grid", gridTemplateRows: "auto auto auto auto auto", gap: 3, overflow: "hidden" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ marginBottom: 0, fontSize: isDesktop ? 22 : isMini ? 14 : 16 }}>麻雀 牌効率ゲーム</h1>
+        <h1 style={{ marginBottom: 0, fontSize: isDesktop ? 22 : isMini ? 14 : 16 }}>麻雀 牌効率ゲーム（{modeLabel(mode)}）</h1>
         <div style={{ display: "flex", gap: 6 }}>
           <button onClick={onBackToMenu} style={{ padding: "4px 8px", fontSize: isDesktop ? 14 : 11 }}>Menu</button>
           <button onClick={startNextGame} style={{ padding: isDesktop ? "6px 10px" : "4px 8px", fontSize: isDesktop ? 14 : 11 }}>New Game</button>
@@ -305,8 +314,12 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
         <div style={{ minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div>
         <div style={{ minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke ? `メンツ手 受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚${isMentsuShantenBack ? "（シャンテン戻し）" : ""}` : ""}</div>
         <div style={{ minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke ? `七対子 受け入れ: ${selectedUke.chiitoiKinds}種 ${selectedUke.chiitoiCount}枚` : ""}</div>
-        <div style={{ color: "#bbe7d5", minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke && selectedIdx != null ? (selectedWaitInfo ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）` : "同じ牌をもう一度クリックで打牌確定") : ""}</div>
-        <div style={{ color: "#ffe082", minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{lastReview ? `直前打牌評価: ${TILE_LABELS[lastReview.discard]} / ${lastReview.mentsuKinds}種${lastReview.mentsuCount}枚 / Top3 ${lastReview.top3.map((x, i) => `${i + 1}位 ${TILE_LABELS[x.tile]}（${x.mCount}枚）`).join(" / ")}` : ""}</div>
+        <div style={{ color: "#bbe7d5", minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>
+          {selectedUke && selectedIdx != null ? (selectedWaitInfo ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）` : "同じ牌をもう一度クリックで打牌確定") : ""}
+        </div>
+        <div style={{ color: "#ffe082", minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>
+          {lastReview ? `直前打牌評価: ${TILE_LABELS[lastReview.discard]} / ${lastReview.mentsuKinds}種${lastReview.mentsuCount}枚 / Top3 ${lastReview.top3.map((x, i) => `${i + 1}位 ${TILE_LABELS[x.tile]}（${x.mCount}枚）`).join(" / ")}` : ""}
+        </div>
       </div>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0,1fr))", gap: isDesktop ? 6 : isMini ? 2 : 3 }}>
