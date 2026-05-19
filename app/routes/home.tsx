@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   calcUkeireForDiscard,
   handWithoutIndex,
+  isWinningHand,
   makeWall,
   shantenChiitoi,
   shantenMentsu,
-  isWinningHand,
   sortTiles,
   TILE_LABELS,
   tileImagePath,
@@ -15,247 +15,201 @@ import {
 
 const MAX_TURNS = 18;
 
-type Stats = {
-  totalGames: number;
-  wins: number;
-  goodMoves: number;
-  totalMoves: number;
+type Mode = "random" | "twoShanten";
+
+type Stats = { totalGames: number; wins: number; goodMoves: number; totalMoves: number };
+type LastDiscardReview = { discard: Tile; mentsuKinds: number; mentsuCount: number; top3: { tile: Tile; count: number }[] };
+
+type GameState = {
+  wall: Tile[];
+  hand13: Tile[];
+  drawTile: Tile | null;
+  river: Tile[];
+  turn: number;
+  resultMsg: string;
+  gameEnded: boolean;
 };
 
-function createGame() {
-  const w = makeWall();
-  const hand13 = w.splice(w.length - 13, 13).sort(sortTiles);
-  const draw = w.pop();
-  return { wall: w, hand13, draw };
+function createGameState(mode: Mode): GameState {
+  if (mode === "random") {
+    const w = makeWall();
+    const hand13 = w.splice(w.length - 13, 13).sort(sortTiles);
+    const draw = w.pop();
+    return { wall: w, hand13, drawTile: draw ?? null, river: [], turn: 1, resultMsg: "", gameEnded: false };
+  }
+
+  for (let i = 0; i < 5000; i++) {
+    const w = makeWall();
+    const hand13 = w.splice(w.length - 13, 13).sort(sortTiles);
+    const draw = w.pop();
+    if (draw == null) continue;
+    const full = [...hand13, draw];
+    if (Math.min(shantenMentsu(full), shantenChiitoi(full)) === 2) {
+      return { wall: w, hand13, drawTile: draw, river: [], turn: 1, resultMsg: "", gameEnded: false };
+    }
+  }
+  return createGameState("random");
 }
 
 export default function Home() {
-  const initial = createGame();
-  const [wall, setWall] = useState<Tile[]>(initial.wall);
-  const [hand13, setHand13] = useState<Tile[]>(initial.hand13);
-  const [drawTile, setDrawTile] = useState<Tile | null>(initial.draw ?? null);
-  const [river, setRiver] = useState<Tile[]>([]);
-  const [turn, setTurn] = useState(1);
+  const [mode, setMode] = useState<Mode | null>(null);
+  const [current, setCurrent] = useState<GameState | null>(null);
+  const [undoStack, setUndoStack] = useState<GameState[]>([]);
+  const [redoStack, setRedoStack] = useState<GameState[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [selectedUke, setSelectedUke] = useState<UkeireResult | null>(null);
   const [selectedWaitInfo, setSelectedWaitInfo] = useState<{ labels: string[]; total: number } | null>(null);
+  const [undoDiffMsg, setUndoDiffMsg] = useState("");
+  const [lastReview, setLastReview] = useState<LastDiscardReview | null>(null);
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
-  const [resultMsg, setResultMsg] = useState("");
-  const [gameEnded, setGameEnded] = useState(false);
 
-  const fullHand = useMemo(() => {
-    const base = [...hand13];
-    if (drawTile != null) base.push(drawTile);
-    return base;
-  }, [hand13, drawTile]);
+  if (mode == null || current == null) {
+    return (
+      <main style={{ maxWidth: 920, margin: "8px auto", padding: "0 8px", color: "#f5f5f5", fontFamily: "sans-serif" }}>
+        <h1 style={{ fontSize: 22 }}>麻雀 牌効率ゲーム</h1>
+        <div style={{ display: "grid", gap: 8 }}>
+          <button onClick={() => { setMode("random"); setCurrent(createGameState("random")); }} style={{ padding: "12px", fontWeight: 700 }}>通常配牌モード</button>
+          <button onClick={() => { setMode("twoShanten"); setCurrent(createGameState("twoShanten")); }} style={{ padding: "12px", fontWeight: 700 }}>二向聴チャレンジ</button>
+        </div>
+      </main>
+    );
+  }
 
+  const { wall, hand13, drawTile, river, turn, resultMsg, gameEnded } = current;
+  const fullHand = useMemo(() => { const base = [...hand13]; if (drawTile != null) base.push(drawTile); return base; }, [hand13, drawTile]);
   const shantenM = useMemo(() => shantenMentsu(fullHand), [fullHand]);
   const shantenC = useMemo(() => shantenChiitoi(fullHand), [fullHand]);
   const goodRate = stats.totalMoves ? Math.round((stats.goodMoves / stats.totalMoves) * 100) : 0;
+  const selectedNext13 = selectedIdx != null ? handWithoutIndex(fullHand, selectedIdx).sort(sortTiles) : null;
+  const previewShantenM = selectedNext13 ? shantenMentsu(selectedNext13) : shantenM;
+  const previewShantenC = selectedNext13 ? shantenChiitoi(selectedNext13) : shantenC;
+  const isMentsuShantenBack = selectedIdx != null && previewShantenM > shantenM;
 
-  useEffect(() => {
-    if (gameEnded) return;
-    if (fullHand.length !== 14) return;
-    if (!isWinningHand(fullHand)) return;
-    setResultMsg("和了");
-    setGameEnded(true);
-    setStats((s) => ({ ...s, totalGames: s.totalGames + 1, wins: s.wins + 1 }));
-  }, [fullHand, gameEnded]);
-
-  function startNextGame(win: boolean) {
-    const next = createGame();
-    setWall(next.wall);
-    setHand13(next.hand13);
-    setDrawTile(next.draw ?? null);
-    setRiver([]);
-    setTurn(1);
-    setSelectedIdx(null);
-    setSelectedUke(null);
-    setSelectedWaitInfo(null);
-    setStats((s) => ({ ...s, totalGames: s.totalGames + 1, wins: s.wins + (win ? 1 : 0) }));
-    setResultMsg("");
-    setGameEnded(false);
+  function resetSelections() { setSelectedIdx(null); setSelectedUke(null); setSelectedWaitInfo(null); }
+  function startNextGame() {
+    setCurrent(createGameState(mode)); setUndoStack([]); setRedoStack([]); resetSelections(); setUndoDiffMsg(""); setLastReview(null);
   }
-
-  function drawIfNeeded(next13: Tile[]) {
-    if (turn >= MAX_TURNS || wall.length === 0) {
-      setResultMsg("流局");
-      setGameEnded(true);
-      setStats((s) => ({ ...s, totalGames: s.totalGames + 1 }));
-      return;
-    }
-    const nextWall = [...wall];
-    const draw = nextWall.pop();
-    if (draw == null) {
-      startNextGame(false);
-      return;
-    }
-    setWall(nextWall);
-    setHand13(next13.sort(sortTiles));
-    setDrawTile(draw);
-    setTurn((v) => v + 1);
-    setSelectedIdx(null);
-    setSelectedUke(null);
-    setSelectedWaitInfo(null);
-  }
-
   function calcWaitInfoForDiscard(hand14: Tile[], discardIdx: number) {
     const next13 = handWithoutIndex(hand14, discardIdx).sort(sortTiles);
     const waits: Tile[] = [];
-    for (let t = 0; t < 34; t++) {
-      if (isWinningHand([...next13, t])) waits.push(t);
-    }
+    for (let t = 0; t < 34; t++) if (isWinningHand([...next13, t])) waits.push(t);
     if (waits.length === 0) return null;
-
-    const counts = Array(34).fill(0);
-    for (const t of next13) counts[t]++;
-    let total = 0;
-    for (const t of waits) total += Math.max(0, 4 - counts[t]);
-
+    const counts = Array(34).fill(0); for (const t of next13) counts[t]++;
+    let total = 0; for (const t of waits) total += Math.max(0, 4 - counts[t]);
     return { labels: waits.map((t) => TILE_LABELS[t]), total };
   }
 
+  function onUndo() { if (undoStack.length === 0) return; const prev = undoStack[undoStack.length - 1]; const nowLast = current.river[current.river.length - 1]; const prevLast = prev.river[prev.river.length - 1]; setUndoDiffMsg(nowLast == null ? "" : `Undo差分: 打牌 ${TILE_LABELS[nowLast]} → ${prevLast == null ? "（打牌前）" : TILE_LABELS[prevLast]}`); setRedoStack((r) => [...r, current]); setUndoStack((u) => u.slice(0, -1)); setCurrent(prev); resetSelections(); }
+  function onRedo() { if (redoStack.length === 0) return; const next = redoStack[redoStack.length - 1]; setUndoStack((u) => [...u, current]); setRedoStack((r) => r.slice(0, -1)); setCurrent(next); setUndoDiffMsg(""); resetSelections(); }
+
   function onTileClick(idx: number) {
-    if (selectedIdx !== idx) {
-      setSelectedIdx(idx);
-      setSelectedUke(calcUkeireForDiscard(fullHand, idx));
-      setSelectedWaitInfo(calcWaitInfoForDiscard(fullHand, idx));
-      return;
-    }
-    const discard = fullHand[idx];
+    if (gameEnded) return;
+    if (selectedIdx !== idx) { setSelectedIdx(idx); setSelectedUke(calcUkeireForDiscard(fullHand, idx)); setSelectedWaitInfo(calcWaitInfoForDiscard(fullHand, idx)); return; }
+
     const currentUke = calcUkeireForDiscard(fullHand, idx).mentsuCount;
     let bestUke = -1;
-    for (let i = 0; i < fullHand.length; i++) bestUke = Math.max(bestUke, calcUkeireForDiscard(fullHand, i).mentsuCount);
+    const all: { tile: Tile; count: number }[] = [];
+    for (let i = 0; i < fullHand.length; i++) {
+      const r = calcUkeireForDiscard(fullHand, i);
+      bestUke = Math.max(bestUke, r.mentsuCount);
+      all.push({ tile: fullHand[i], count: r.mentsuCount });
+    }
     setStats((s) => ({ ...s, totalMoves: s.totalMoves + 1, goodMoves: s.goodMoves + (currentUke >= bestUke ? 1 : 0) }));
+
+    const discard = fullHand[idx];
     const next13 = handWithoutIndex(fullHand, idx).sort(sortTiles);
-    if (gameEnded) return;
-    setRiver((r) => [...r, discard]);
-    drawIfNeeded(next13);
+    const nextState: GameState = { ...current, river: [...river, discard], hand13: next13, drawTile: null };
+
+    const top3 = [...all].sort((a, b) => b.count - a.count).slice(0, 3);
+    const currentR = calcUkeireForDiscard(fullHand, idx);
+    setLastReview({ discard, mentsuKinds: currentR.mentsuKinds, mentsuCount: currentR.mentsuCount, top3 });
+
+    const isTenpai = shantenMentsu(next13) === 0 || shantenChiitoi(next13) === 0;
+    if (isTenpai) {
+      nextState.resultMsg = "聴牌"; nextState.gameEnded = true; setStats((st) => ({ ...st, totalGames: st.totalGames + 1 }));
+      setUndoStack((u) => [...u, current]); setRedoStack([]); setCurrent(nextState); setUndoDiffMsg(""); resetSelections(); return;
+    }
+
+    if (turn >= MAX_TURNS || wall.length === 0) { nextState.resultMsg = "流局"; nextState.gameEnded = true; setStats((s) => ({ ...s, totalGames: s.totalGames + 1 })); }
+    else {
+      const nextWall = [...wall]; const draw = nextWall.pop();
+      if (draw == null) { nextState.resultMsg = "流局"; nextState.gameEnded = true; setStats((s) => ({ ...s, totalGames: s.totalGames + 1 })); }
+      else { nextState.wall = nextWall; nextState.drawTile = draw; nextState.turn = turn + 1; }
+    }
+
+    setUndoStack((u) => [...u, current]); setRedoStack([]); setCurrent(nextState); setUndoDiffMsg(""); resetSelections();
   }
 
   return (
-    <main style={{ maxWidth: 920, margin: "8px auto", fontFamily: "sans-serif", padding: "0 8px", color: "#f5f5f5" }}>
-      <h1 style={{ marginBottom: 6, fontSize: 22 }}>麻雀 牌効率ゲーム</h1>
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(90px,1fr))", gap: 6, marginBottom: 8 }}>
-        <Stat label="メンツ手" value={String(shantenM)} />
-        <Stat label="七対子" value={String(shantenC)} />
+    <main style={{ maxWidth: 920, margin: "4px auto", fontFamily: "sans-serif", padding: "0 6px", color: "#f5f5f5", minHeight: "100svh", height: "100svh", paddingBottom: "env(safe-area-inset-bottom)", display: "grid", gridTemplateRows: "auto auto auto auto auto", gap: 3, overflow: "hidden" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h1 style={{ marginBottom: 0, fontSize: 16 }}>麻雀 牌効率ゲーム</h1>
+        <button onClick={startNextGame} style={{ padding: "4px 8px", fontSize: 11 }}>New Game</button>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, alignItems: "start", minHeight: 78 }}>
+        <River river={river} fixedHeight={74} compact />
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 10 }}>
+          <button onClick={onUndo} disabled={undoStack.length === 0} style={{ padding: "4px 8px", minWidth: 56, fontSize: 11 }}>Undo</button>
+          <button onClick={onRedo} disabled={redoStack.length === 0} style={{ padding: "4px 8px", minWidth: 56, fontSize: 11 }}>Redo</button>
+          <span style={{ color: "#bbe7d5", width: 96, fontSize: 9, lineHeight: 1.2 }}>{undoDiffMsg}</span>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 2, minHeight: 48 }}>
+        {fullHand.slice(0, 13).map((t, i) => (
+          <button key={`h-${t}-${i}`} onClick={() => onTileClick(i)} style={{ width: 30, height: 42, padding: 0, borderRadius: 0, outline: i === selectedIdx ? "2px solid #6cc9ff" : "none", marginRight: -1, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
+            <MahjongTileFace tile={t} compact />
+          </button>
+        ))}
+        {fullHand[13] != null && <button key={`d-${fullHand[13]}`} onClick={() => onTileClick(13)} style={{ width: 30, height: 42, padding: 0, borderRadius: 0, outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none", marginLeft: 8, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}><MahjongTileFace tile={fullHand[13]} compact /></button>}
+      </div>
+
+      <div style={{ padding: 4, borderRadius: 8, background: "#00552e", fontSize: 9, minHeight: 70, overflow: "hidden" }}>
+        {resultMsg ? <div style={{ fontWeight: 700, color: "#ffe082", fontSize: 14 }}>{resultMsg}</div> : null}
+        <div style={{ minHeight: 12 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div>
+        <div style={{ minHeight: 12 }}>{selectedUke ? `メンツ手 受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚${isMentsuShantenBack ? "（シャンテン戻し）" : ""}` : ""}</div>
+        <div style={{ minHeight: 12 }}>{selectedUke ? `七対子 受け入れ: ${selectedUke.chiitoiKinds}種 ${selectedUke.chiitoiCount}枚` : ""}</div>
+        <div style={{ color: "#bbe7d5", minHeight: 12 }}>{selectedUke && selectedIdx != null ? (selectedWaitInfo ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）` : "同じ牌をもう一度クリックで打牌確定") : ""}</div>
+        <div style={{ color: "#ffe082", minHeight: 12 }}>
+          {lastReview ? `直前打牌評価: ${TILE_LABELS[lastReview.discard]} / ${lastReview.mentsuKinds}種${lastReview.mentsuCount}枚 / Top3 ${lastReview.top3.map((x, i) => `${i + 1}.${TILE_LABELS[x.tile]}:${x.count}`).join(" ")}` : ""}
+        </div>
+      </div>
+
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0,1fr))", gap: 3 }}>
+        <Stat label="メンツ手" value={selectedIdx != null ? `${shantenM} → ${previewShantenM}` : String(shantenM)} />
+        <Stat label="七対子" value={selectedIdx != null ? `${shantenC} → ${previewShantenC}` : String(shantenC)} />
         <Stat label="巡目" value={String(turn)} />
         <Stat label="良打率" value={`${goodRate}%`} />
         <Stat label="勝利/総数" value={`${stats.wins}/${stats.totalGames}`} />
       </section>
-
-      <div style={{ padding: 8, borderRadius: 8, marginBottom: 8, background: "#00552e", fontSize: 14, height: 86, overflow: "hidden" }}>
-        {resultMsg ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "100%" }}>
-            <div style={{ fontWeight: 700, color: "#ffe082", fontSize: 20 }}>{resultMsg}</div>
-            {gameEnded && <button onClick={() => startNextGame(resultMsg === "和了")} style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: "#6cc9ff", color: "#023", fontWeight: 700, cursor: "pointer" }}>New Game</button>}
-          </div>
-        ) : (
-          <>
-            <div style={{ fontWeight: 700, marginBottom: 4, minHeight: 20 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div>
-            <div style={{ minHeight: 20 }}>{selectedUke && selectedIdx != null ? `受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚` : ""}</div>
-            <div style={{ color: "#bbe7d5", marginTop: 3, minHeight: 20 }}>
-              {selectedUke && selectedIdx != null
-                ? selectedWaitInfo
-                  ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）`
-                  : "同じ牌をもう一度クリックで打牌確定"
-                : ""}
-            </div>
-          </>
-        )}
-      </div>
-
-      <div style={{ marginBottom: 6, fontWeight: 700 }}>河（6枚ずつ）</div>
-      <River river={river} />
-
-      <div style={{ margin: "8px 0 6px", fontWeight: 700 }}>手牌（13枚 + ツモ1枚）</div>
-      <div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 6 }}>
-        {fullHand.slice(0, 13).map((t, i) => (
-          <button
-            key={`h-${t}-${i}`}
-            onClick={() => onTileClick(i)}
-            style={{
-              width: 44,
-              height: 60,
-              padding: 0,
-              borderRadius: 0,
-              outline: i === selectedIdx ? "2px solid #6cc9ff" : "none",
-              marginRight: -1,
-              background: "#13523d",
-              cursor: gameEnded ? "default" : "pointer",
-              flex: "0 0 auto",
-            }}
-          >
-            <MahjongTileFace tile={t} compact />
-          </button>
-        ))}
-        {fullHand[13] != null && (
-          <button
-            key={`d-${fullHand[13]}`}
-            onClick={() => onTileClick(13)}
-            style={{
-              width: 44,
-              height: 60,
-              padding: 0,
-              borderRadius: 0,
-              outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none",
-              marginLeft: 14,
-              background: "#13523d",
-              cursor: gameEnded ? "default" : "pointer",
-              flex: "0 0 auto",
-            }}
-          >
-            <MahjongTileFace tile={fullHand[13]} compact />
-          </button>
-        )}
-      </div>
     </main>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 6, background: "#00552e" }}><div style={{ fontSize: 11, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 16, color: "#f5f5f5" }}>{value}</div></div>;
+  return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 4, background: "#00552e" }}><div style={{ fontSize: 8, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 11, color: "#f5f5f5" }}>{value}</div></div>;
 }
 
 function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: boolean }) {
   return (
-    <span style={{ display: "inline-flex", width: "100%", height: "100%", borderRadius: compact ? 0 : 6, background: "#f4f4f4", alignItems: "center", justifyContent: "flex-start", overflow: "hidden" }}>
-      <img
-        src={tileImagePath(tile)}
-        alt={TILE_LABELS[tile]}
-        width={44}
-        height={60}
-        style={{ display: "block", pointerEvents: "none", width: "auto", height: "100%", maxWidth: "100%", objectFit: "contain", objectPosition: "center", margin: "0 auto" }}
-        onError={(e) => {
-          e.currentTarget.style.display = "none";
-          const next = e.currentTarget.nextElementSibling as HTMLElement | null;
-          if (next) next.style.display = "inline";
-        }}
-      />
+    <span style={{ display: "inline-flex", width: "100%", height: "100%", borderRadius: compact ? 0 : 6, background: "#f4f4f4", alignItems: "center", justifyContent: "flex-start", overflow: "hidden", boxSizing: "border-box", border: "1px solid #d7d7d7" }}>
+      <img src={tileImagePath(tile)} alt={TILE_LABELS[tile]} width={44} height={60} style={{ display: "block", pointerEvents: "none", width: "auto", height: "100%", maxWidth: "100%", objectFit: "contain", objectPosition: "center", margin: "0 auto" }} onError={(e) => { e.currentTarget.style.display = "none"; const next = e.currentTarget.nextElementSibling as HTMLElement | null; if (next) next.style.display = "inline"; }} />
       <span style={{ display: "none", color: "#102218", fontSize: 12, fontWeight: 700 }}>{TILE_LABELS[tile]}</span>
     </span>
   );
 }
 
-function River({ river }: { river: Tile[] }) {
+function River({ river, fixedHeight, compact = false }: { river: Tile[]; fixedHeight?: number; compact?: boolean }) {
   const rows: Tile[][] = [];
   for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6));
-
   return (
-    <div style={{ borderRadius: 8, padding: 8, minHeight: 64, marginBottom: 8, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-      {rows.length === 0 ? (
-        <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div>
-      ) : (
-        rows.map((row, rIdx) => (
-          <div key={rIdx} style={{ display: "flex", gap: 6, marginBottom: 6, justifyContent: "flex-start" }}>
-            {row.map((t, i) => (
-              <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: 28, height: 40 }}>
-                <MahjongTileFace tile={t} />
-              </span>
-            ))}
-          </div>
-        ))
-      )}
+    <div style={{ borderRadius: 8, padding: compact ? 4 : 8, height: fixedHeight ?? 120, marginBottom: 0, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "flex-start", overflowY: "auto" }}>
+      {rows.length === 0 ? <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div> : rows.map((row, rIdx) => (
+        <div key={rIdx} style={{ display: "flex", gap: compact ? 3 : 6, marginBottom: compact ? 3 : 6, justifyContent: "flex-start" }}>
+          {row.map((t, i) => <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: compact ? 18 : 28, height: compact ? 26 : 40 }}><MahjongTileFace tile={t} /></span>)}
+        </div>
+      ))}
     </div>
   );
 }
