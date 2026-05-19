@@ -43,6 +43,7 @@ export type MentsuStructure = {
  * will be implemented in a later step.
  */
 export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
+
   const c = toCounts(hand);
   let bestBlocks = -1;
   let bestHasPair = false;
@@ -109,6 +110,7 @@ export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
 
   dfs(0, 0, 0, 0);
   return { blocks: Math.max(0, bestBlocks), hasPair: bestHasPair, shantenMentsuOnly: shantenMentsu(hand) };
+
 }
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
