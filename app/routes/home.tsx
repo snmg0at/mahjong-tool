@@ -14,6 +14,7 @@ import {
 } from "../lib/mahjong";
 
 const MAX_TURNS = 18;
+const MOBILE_BREAKPOINT = 640;
 
 type Stats = {
   totalGames: number;
@@ -49,6 +50,9 @@ export default function Home() {
   const [undoDiffMsg, setUndoDiffMsg] = useState("");
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
 
+  const [isMobile, setIsMobile] = useState(false);
+
+
   const { wall, hand13, drawTile, river, turn, resultMsg, gameEnded } = current;
 
   const fullHand = useMemo(() => {
@@ -67,6 +71,15 @@ export default function Home() {
   const isMentsuShantenBack = selectedIdx != null && previewShantenM > shantenM;
 
   useEffect(() => {
+
+    const update = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+
     if (gameEnded || fullHand.length !== 14 || !isWinningHand(fullHand)) return;
     setCurrent((s) => ({ ...s, resultMsg: "和了", gameEnded: true }));
     setStats((s) => ({ ...s, totalGames: s.totalGames + 1, wins: s.wins + 1 }));
@@ -168,11 +181,11 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 920, margin: "8px auto", fontFamily: "sans-serif", padding: "0 8px", color: "#f5f5f5", minHeight: 620, display: "grid", gridTemplateRows: "auto auto auto 1fr auto", gap: 8 }}>
-      <h1 style={{ marginBottom: 0, fontSize: 22 }}>麻雀 牌効率ゲーム</h1>
 
+    <main style={{ maxWidth: 920, margin: "4px auto", fontFamily: "sans-serif", padding: isMobile ? "0 6px" : "0 8px", color: "#f5f5f5", minHeight: isMobile ? "100dvh" : 620, height: isMobile ? "100dvh" : "auto", display: "grid", gridTemplateRows: "auto auto auto 1fr auto", gap: isMobile ? 4 : 8, overflow: "hidden" }}>
+      <h1 style={{ marginBottom: 0, fontSize: isMobile ? 18 : 22 }}>麻雀 牌効率ゲーム</h1>
 
-      <div style={{ padding: 8, borderRadius: 8, background: "#00552e", fontSize: 13, minHeight: 96 }}>
+      <div style={{ padding: isMobile ? 6 : 8, borderRadius: 8, background: "#00552e", fontSize: isMobile ? 11 : 13, minHeight: isMobile ? 78 : 96, overflow: "hidden" }}>
 
         {resultMsg ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "100%" }}>
@@ -191,37 +204,37 @@ export default function Home() {
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "start", minHeight: 120 }}>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: isMobile ? 6 : 10, alignItems: "start", minHeight: isMobile ? 96 : 120 }}>
         <div>
           <div style={{ marginBottom: 6, fontWeight: 700 }}>河（6枚ずつ）</div>
-          <River river={river} fixedHeight={120} />
+          <River river={river} fixedHeight={isMobile ? 92 : 120} compact={isMobile} />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 26 }}>
-          <button onClick={onUndo} disabled={undoStack.length === 0} style={{ padding: "6px 10px", minWidth: 74 }}>Undo</button>
-          <button onClick={onRedo} disabled={redoStack.length === 0} style={{ padding: "6px 10px", minWidth: 74 }}>Redo</button>
-          <span style={{ color: "#bbe7d5", width: 190, fontSize: 12 }}>{undoDiffMsg}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 4 : 8, paddingTop: isMobile ? 22 : 26 }}>
+          <button onClick={onUndo} disabled={undoStack.length === 0} style={{ padding: isMobile ? "4px 8px" : "6px 10px", minWidth: isMobile ? 62 : 74, fontSize: isMobile ? 12 : 16 }}>Undo</button>
+          <button onClick={onRedo} disabled={redoStack.length === 0} style={{ padding: isMobile ? "4px 8px" : "6px 10px", minWidth: isMobile ? 62 : 74, fontSize: isMobile ? 12 : 16 }}>Redo</button>
+          <span style={{ color: "#bbe7d5", width: isMobile ? 120 : 190, fontSize: isMobile ? 10 : 12, lineHeight: 1.2 }}>{undoDiffMsg}</span>
         </div>
       </div>
 
-
       <div>
-        <div style={{ margin: "0 0 6px", fontWeight: 700 }}>手牌（13枚 + ツモ1枚）</div>
-        <div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 6, minHeight: 66 }}>
+        <div style={{ margin: "0 0 4px", fontWeight: 700, fontSize: isMobile ? 14 : 16 }}>手牌（13枚 + ツモ1枚）</div>
+        <div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 4, minHeight: isMobile ? 56 : 66 }}>
           {fullHand.slice(0, 13).map((t, i) => (
-            <button key={`h-${t}-${i}`} onClick={() => onTileClick(i)} style={{ width: 44, height: 60, padding: 0, borderRadius: 0, outline: i === selectedIdx ? "2px solid #6cc9ff" : "none", marginRight: -1, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
+            <button key={`h-${t}-${i}`} onClick={() => onTileClick(i)} style={{ width: isMobile ? 34 : 44, height: isMobile ? 48 : 60, padding: 0, borderRadius: 0, outline: i === selectedIdx ? "2px solid #6cc9ff" : "none", marginRight: -1, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
               <MahjongTileFace tile={t} compact />
             </button>
           ))}
           {fullHand[13] != null && (
-            <button key={`d-${fullHand[13]}`} onClick={() => onTileClick(13)} style={{ width: 44, height: 60, padding: 0, borderRadius: 0, outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none", marginLeft: 14, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
+            <button key={`d-${fullHand[13]}`} onClick={() => onTileClick(13)} style={{ width: isMobile ? 34 : 44, height: isMobile ? 48 : 60, padding: 0, borderRadius: 0, outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none", marginLeft: isMobile ? 10 : 14, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
               <MahjongTileFace tile={fullHand[13]} compact />
             </button>
           )}
         </div>
-
       </div>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(90px,1fr))", gap: 6 }}>
+      <section style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(80px,1fr))" : "repeat(5, minmax(90px,1fr))", gap: isMobile ? 4 : 6 }}>
+
         <Stat label="メンツ手" value={selectedIdx != null ? `${shantenM} → ${previewShantenM}` : String(shantenM)} />
         <Stat label="七対子" value={selectedIdx != null ? `${shantenC} → ${previewShantenC}` : String(shantenC)} />
         <Stat label="巡目" value={String(turn)} />
@@ -245,17 +258,19 @@ function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: bool
   );
 }
 
-function River({ river, fixedHeight }: { river: Tile[]; fixedHeight?: number }) {
+
+function River({ river, fixedHeight, compact = false }: { river: Tile[]; fixedHeight?: number; compact?: boolean }) {
+
   const rows: Tile[][] = [];
   for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6));
 
   return (
-    
-    <div style={{ borderRadius: 8, padding: 8, height: fixedHeight ?? 120, marginBottom: 0, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "flex-start", overflowY: "auto" }}>
 
+    <div style={{ borderRadius: 8, padding: compact ? 6 : 8, height: fixedHeight ?? 120, marginBottom: 0, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "flex-start", overflowY: "auto" }}>
       {rows.length === 0 ? <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div> : rows.map((row, rIdx) => (
-        <div key={rIdx} style={{ display: "flex", gap: 6, marginBottom: 6, justifyContent: "flex-start" }}>
-          {row.map((t, i) => <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: 28, height: 40 }}><MahjongTileFace tile={t} /></span>)}
+        <div key={rIdx} style={{ display: "flex", gap: compact ? 4 : 6, marginBottom: compact ? 4 : 6, justifyContent: "flex-start" }}>
+          {row.map((t, i) => <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: compact ? 22 : 28, height: compact ? 32 : 40 }}><MahjongTileFace tile={t} /></span>)}
+
         </div>
       ))}
     </div>
