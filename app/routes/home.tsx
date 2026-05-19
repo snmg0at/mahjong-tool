@@ -13,6 +13,7 @@ import {
 } from "../lib/mahjong";
 
 const MAX_TURNS = 18;
+const MOBILE_BREAKPOINT = 640;
 
 type Stats = {
   totalGames: number;
@@ -48,6 +49,8 @@ export default function Home() {
   const [undoDiffMsg, setUndoDiffMsg] = useState("");
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
 
+
+
   const { wall, hand13, drawTile, river, turn, resultMsg, gameEnded } = current;
 
   const fullHand = useMemo(() => {
@@ -64,6 +67,7 @@ export default function Home() {
   const previewShantenM = selectedNext13 ? shantenMentsu(selectedNext13) : shantenM;
   const previewShantenC = selectedNext13 ? shantenChiitoi(selectedNext13) : shantenC;
   const isMentsuShantenBack = selectedIdx != null && previewShantenM > shantenM;
+
 
   function resetSelections() {
     setSelectedIdx(null);
@@ -97,7 +101,9 @@ export default function Home() {
     const prev = undoStack[undoStack.length - 1];
     const nowLast = current.river[current.river.length - 1];
     const prevLast = prev.river[prev.river.length - 1];
+
     setUndoDiffMsg(nowLast == null ? "" : `Undo差分: 打牌 ${TILE_LABELS[nowLast]} → ${prevLast == null ? "（打牌前）" : TILE_LABELS[prevLast]}`);
+
     setRedoStack((r) => [...r, current]);
     setUndoStack((u) => u.slice(0, -1));
     setCurrent(prev);
@@ -132,6 +138,7 @@ export default function Home() {
     const next13 = handWithoutIndex(fullHand, idx).sort(sortTiles);
     const nextState: GameState = { ...current, river: [...river, discard] };
 
+
     const isTenpai = shantenMentsu(next13) === 0 || shantenChiitoi(next13) === 0;
     if (isTenpai) {
       nextState.resultMsg = "聴牌";
@@ -144,6 +151,7 @@ export default function Home() {
       resetSelections();
       return;
     }
+
 
     if (turn >= MAX_TURNS || wall.length === 0) {
       nextState.resultMsg = "流局";
@@ -172,6 +180,7 @@ export default function Home() {
   }
 
   return (
+
     <main style={{ maxWidth: 920, margin: "4px auto", fontFamily: "sans-serif", padding: "0 6px", color: "#f5f5f5", minHeight: "100svh", height: "100svh", paddingBottom: "env(safe-area-inset-bottom)", display: "grid", gridTemplateRows: "auto auto auto auto auto", gap: 3, overflow: "hidden" }}>
       <h1 style={{ marginBottom: 0, fontSize: 16 }}>麻雀 牌効率ゲーム</h1>
 
@@ -183,23 +192,29 @@ export default function Home() {
           <button onClick={onUndo} disabled={undoStack.length === 0} style={{ padding: "4px 8px", minWidth: 56, fontSize: 11 }}>Undo</button>
           <button onClick={onRedo} disabled={redoStack.length === 0} style={{ padding: "4px 8px", minWidth: 56, fontSize: 11 }}>Redo</button>
           <span style={{ color: "#bbe7d5", width: 96, fontSize: 9, lineHeight: 1.2 }}>{undoDiffMsg}</span>
+
         </div>
       </div>
 
       <div>
+
         <div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 2, minHeight: 48 }}>
           {fullHand.slice(0, 13).map((t, i) => (
             <button key={`h-${t}-${i}`} onClick={() => onTileClick(i)} style={{ width: 30, height: 42, padding: 0, borderRadius: 0, outline: i === selectedIdx ? "2px solid #6cc9ff" : "none", marginRight: -1, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
+
               <MahjongTileFace tile={t} compact />
             </button>
           ))}
           {fullHand[13] != null && (
+
             <button key={`d-${fullHand[13]}`} onClick={() => onTileClick(13)} style={{ width: 30, height: 42, padding: 0, borderRadius: 0, outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none", marginLeft: 8, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}>
+
               <MahjongTileFace tile={fullHand[13]} compact />
             </button>
           )}
         </div>
       </div>
+
 
       <div style={{ padding: 5, borderRadius: 8, background: "#00552e", fontSize: 10, minHeight: 66, overflow: "hidden" }}>
         {resultMsg ? (
@@ -213,11 +228,14 @@ export default function Home() {
             <div style={{ minHeight: 14 }}>{selectedUke ? `メンツ手 受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚${isMentsuShantenBack ? "（シャンテン戻し）" : ""}` : ""}</div>
             <div style={{ minHeight: 14 }}>{selectedUke ? `七対子 受け入れ: ${selectedUke.chiitoiKinds}種 ${selectedUke.chiitoiCount}枚` : ""}</div>
             <div style={{ color: "#bbe7d5", marginTop: 2, minHeight: 14 }}>{selectedUke && selectedIdx != null ? (selectedWaitInfo ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）` : "同じ牌をもう一度クリックで打牌確定") : ""}</div>
+
           </>
         )}
       </div>
 
+
       <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0,1fr))", gap: 3 }}>
+
         <Stat label="メンツ手" value={selectedIdx != null ? `${shantenM} → ${previewShantenM}` : String(shantenM)} />
         <Stat label="七対子" value={selectedIdx != null ? `${shantenC} → ${previewShantenC}` : String(shantenC)} />
         <Stat label="巡目" value={String(turn)} />
@@ -229,7 +247,9 @@ export default function Home() {
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
+
   return <div style={{ border: "1px solid #2b7056", borderRadius: 8, padding: 4, background: "#00552e" }}><div style={{ fontSize: 8, color: "#bbe7d5" }}>{label}</div><div style={{ fontWeight: 700, fontSize: 11, color: "#f5f5f5" }}>{value}</div></div>;
+
 }
 
 function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: boolean }) {
@@ -241,15 +261,19 @@ function MahjongTileFace({ tile, compact = false }: { tile: Tile; compact?: bool
   );
 }
 
+
 function River({ river, fixedHeight, compact = false }: { river: Tile[]; fixedHeight?: number; compact?: boolean }) {
+
   const rows: Tile[][] = [];
   for (let i = 0; i < river.length; i += 6) rows.push(river.slice(i, i + 6));
 
   return (
+    
     <div style={{ borderRadius: 8, padding: compact ? 4 : 8, height: fixedHeight ?? 120, marginBottom: 0, background: "#00552e", display: "flex", flexDirection: "column", alignItems: "flex-start", overflowY: "auto" }}>
       {rows.length === 0 ? <div style={{ color: "#bbe7d5" }}>（まだ捨て牌なし）</div> : rows.map((row, rIdx) => (
         <div key={rIdx} style={{ display: "flex", gap: compact ? 3 : 6, marginBottom: compact ? 3 : 6, justifyContent: "flex-start" }}>
           {row.map((t, i) => <span key={`${rIdx}-${i}`} style={{ borderRadius: 4, padding: "1px", background: "#184f3b", width: compact ? 18 : 28, height: compact ? 26 : 40 }}><MahjongTileFace tile={t} /></span>)}
+
         </div>
       ))}
     </div>
