@@ -45,19 +45,41 @@ export type MentsuStructure = {
 export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
 
   const c = toCounts(hand);
+  let bestMeld = -1;
+  let bestShanten = 99;
+
   let bestBlocks = -1;
   let bestHasPair = false;
 
   function update(meld: number, taatsu: number, pair: number) {
     const mm = Math.min(meld, 4);
     const tt = Math.min(taatsu, 4 - mm);
-    const blocks = mm + tt + pair;
-    if (blocks > bestBlocks) {
-      bestBlocks = blocks;
-      bestHasPair = pair > 0;
+
+    const pp = pair > 0 ? 1 : 0;
+    const blocks = mm + tt + pp;
+    const shanten = 8 - mm * 2 - tt - pp;
+
+    if (mm > bestMeld) {
+      bestMeld = mm; bestShanten = shanten; bestBlocks = blocks; bestHasPair = pp > 0;
       return;
     }
-    if (blocks === bestBlocks && pair > 0) bestHasPair = true;
+    if (mm < bestMeld) return;
+
+    if (shanten < bestShanten) {
+      bestShanten = shanten; bestBlocks = blocks; bestHasPair = pp > 0;
+      return;
+    }
+    if (shanten > bestShanten) return;
+
+    if (pp > 0 && !bestHasPair) {
+      bestBlocks = blocks;
+      bestHasPair = true;
+      return;
+    }
+    if (bestHasPair && pp === 0) return;
+
+    if (blocks > bestBlocks) bestBlocks = blocks;
+
   }
 
   function dfs(idx: number, meld: number, taatsu: number, pair: number) {
