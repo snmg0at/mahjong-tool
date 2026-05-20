@@ -24,7 +24,6 @@ type Mode = "random" | "twoShanten" | "fiveBlockWithPair" | "fourBlockWithPair" 
 const ADVANCED_MODES: Mode[] = ["fiveBlockWithPair", "fourBlockWithPair", "fiveBlockNoPair", "twoShantenFiveBlock", "twoShantenFourBlock", "twoShantenNoPair"];
 const isAdvancedMode = (mode: Mode): boolean => ADVANCED_MODES.includes(mode);
 
-
 const modeLabel = (mode: Mode): string => {
   if (mode === "random") return "通常配牌モード";
   if (mode === "twoShanten") return "二向聴チャレンジ";
@@ -51,6 +50,9 @@ function createGameState(mode: Mode): GameState {
     const minShanten = Math.min(shantenMentsu(fullHand), shantenChiitoi(fullHand));
     if (mode === "twoShanten") return minShanten === 2;
     if (mode === "fiveBlockWithPair") return m.blocks === 5 && m.hasPair;
+
+    // 合意仕様: 「4ブロック雀頭あり」はシャンテン固定せず、形条件のみで開始する
+
     if (mode === "fourBlockWithPair") return m.blocks === 4 && m.hasPair;
     if (mode === "fiveBlockNoPair") return m.blocks === 5 && !m.hasPair;
     if (mode === "twoShantenFiveBlock") return m.shantenMentsuOnly === 2 && m.blocks === 5 && m.hasPair;
@@ -151,6 +153,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
     const top3 = [...all].sort((a, b) => b.score - a.score || b.mCount - a.mCount || b.mKinds - a.mKinds).slice(0, 3);
     const cur = calcUkeireForDiscard(fullHand, idx);
     nextState.lastReview = { discard, mentsuKinds: cur.mentsuKinds, mentsuCount: cur.mentsuCount, top3 };
+
 
     if (shantenMentsu(next13) === 0 || shantenChiitoi(next13) === 0) {
       nextState.resultMsg = "聴牌";
