@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import {
   calcUkeireForDiscard,
+  classifyMentsuStructure,
   handWithoutIndex,
   isWinningHand,
   makeWall,
   shantenChiitoi,
   shantenMentsu,
+
   classifyMentsuStructure,
+
   sortTiles,
   TILE_LABELS,
   tileImagePath,
@@ -16,9 +19,11 @@ import {
 } from "../lib/mahjong";
 
 const MAX_TURNS = 18;
+
 type Mode = "random" | "twoShanten" | "fiveBlockWithPair" | "fourBlockWithPair" | "fiveBlockNoPair" | "twoShantenFiveBlock" | "twoShantenFourBlock" | "twoShantenNoPair";
 const ADVANCED_MODES: Mode[] = ["fiveBlockWithPair", "fourBlockWithPair", "fiveBlockNoPair", "twoShantenFiveBlock", "twoShantenFourBlock", "twoShantenNoPair"];
 const isAdvancedMode = (mode: Mode): boolean => ADVANCED_MODES.includes(mode);
+
 const modeLabel = (mode: Mode): string => {
   if (mode === "random") return "通常配牌モード";
   if (mode === "twoShanten") return "二向聴チャレンジ";
@@ -45,7 +50,9 @@ function createGameState(mode: Mode): GameState {
     const minShanten = Math.min(shantenMentsu(fullHand), shantenChiitoi(fullHand));
     if (mode === "twoShanten") return minShanten === 2;
     if (mode === "fiveBlockWithPair") return m.blocks === 5 && m.hasPair;
+
     // 合意仕様: 「4ブロック雀頭あり」はシャンテン固定せず、形条件のみで開始する
+
     if (mode === "fourBlockWithPair") return m.blocks === 4 && m.hasPair;
     if (mode === "fiveBlockNoPair") return m.blocks === 5 && !m.hasPair;
     if (mode === "twoShantenFiveBlock") return m.shantenMentsuOnly === 2 && m.blocks === 5 && m.hasPair;
@@ -64,6 +71,7 @@ function createGameState(mode: Mode): GameState {
   return fromRandomDeal();
 }
 
+
 function breaksCompletedMeldShape(base13: Tile[], discard: Tile): boolean {
   const c = toCounts(base13);
   if (discard <= 26 && c[discard] >= 2) return true;
@@ -77,9 +85,11 @@ function breaksCompletedMeldShape(base13: Tile[], discard: Tile): boolean {
 
 export default function Home() {
   const [mode, setMode] = useState<Mode | null>(null);
+
   if (mode == null) {
     return <main style={{ maxWidth: 920, margin: "8px auto", padding: "0 8px", color: "#f5f5f5", fontFamily: "sans-serif" }}><h1 style={{ fontSize: 22 }}>麻雀 牌効率ゲーム</h1><div style={{ display: "grid", gap: 12 }}><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>通常</h2><button onClick={() => setMode("random")} style={{ padding: "12px", fontWeight: 700 }}>通常配牌モード</button><button onClick={() => setMode("twoShanten")} style={{ padding: "12px", fontWeight: 700 }}>二向聴チャレンジ</button></section><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>上級</h2><button onClick={() => setMode("fiveBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭あり</button><button onClick={() => setMode("fourBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>4ブロック雀頭あり</button><button onClick={() => setMode("fiveBlockNoPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭なし</button><button onClick={() => setMode("twoShantenFiveBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴5ブロック</button><button onClick={() => setMode("twoShantenFourBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴4ブロック</button><button onClick={() => setMode("twoShantenNoPair")} style={{ padding: "12px", fontWeight: 700 }}>二向聴雀頭なし</button></section></div></main>;
   }
+
   return <GameScreen mode={mode} onBackToMenu={() => setMode(null)} />;
 }
 
@@ -92,8 +102,10 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
   const [selectedWaitInfo, setSelectedWaitInfo] = useState<{ labels: string[]; total: number } | null>(null);
   const [undoDiffMsg, setUndoDiffMsg] = useState("");
   const [stats, setStats] = useState<Stats>({ totalGames: 0, wins: 0, goodMoves: 0, totalMoves: 0 });
+
   const isMini = typeof window !== "undefined" && window.innerHeight <= 740;
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
+
 
   const { wall, hand13, drawTile, river, turn, resultMsg, gameEnded, lastReview } = current;
   const fullHand = useMemo(() => { const b = [...hand13]; if (drawTile != null) b.push(drawTile); return b; }, [hand13, drawTile]);
@@ -108,6 +120,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
 
   const resetSelections = () => { setSelectedIdx(null); setSelectedUke(null); setSelectedWaitInfo(null); };
   const startNextGame = () => { setCurrent(createGameState(mode)); setUndoStack([]); setRedoStack([]); resetSelections(); setUndoDiffMsg(""); };
+
   const calcWaitInfoForDiscard = (hand14: Tile[], discardIdx: number) => { const next13 = handWithoutIndex(hand14, discardIdx).sort(sortTiles); const waits: Tile[] = []; for (let t = 0; t < 34; t++) if (isWinningHand([...next13, t])) waits.push(t); if (waits.length === 0) return null; const counts = Array(34).fill(0); for (const t of next13) counts[t]++; let total = 0; for (const t of waits) total += Math.max(0, 4 - counts[t]); return { labels: waits.map((t) => TILE_LABELS[t]), total }; };
 
   const onUndo = () => { if (!undoStack.length) return; const prev = undoStack[undoStack.length - 1]; const nowLast = current.river[current.river.length - 1]; const prevLast = prev.river[prev.river.length - 1]; setUndoDiffMsg(nowLast == null ? "" : `Undo差分: 打牌 ${TILE_LABELS[nowLast]} → ${prevLast == null ? "（打牌前）" : TILE_LABELS[prevLast]}`); setRedoStack((r) => [...r, current]); setUndoStack((u) => u.slice(0, -1)); setCurrent(prev); resetSelections(); };
@@ -140,6 +153,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
     const top3 = [...all].sort((a, b) => b.score - a.score || b.mCount - a.mCount || b.mKinds - a.mKinds).slice(0, 3);
     const cur = calcUkeireForDiscard(fullHand, idx);
     nextState.lastReview = { discard, mentsuKinds: cur.mentsuKinds, mentsuCount: cur.mentsuCount, top3 };
+
 
     if (shantenMentsu(next13) === 0 || shantenChiitoi(next13) === 0) {
       nextState.resultMsg = "聴牌";
