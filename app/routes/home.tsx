@@ -53,7 +53,7 @@ function createGameState(mode: Mode): GameState {
 
     // 合意仕様: 「4ブロック雀頭あり」はシャンテン固定せず、形条件のみで開始する
     if (mode === "fourBlockWithPair") return m.blocks === 4 && m.hasPair;
-    if (mode === "fiveBlockNoPair") return m.blocks === 5 && !m.hasPair && (() => { const cc = toCounts(fullHand); for (let i = 0; i < 34; i++) if (cc[i] >= 2) return false; return true; })();
+    if (mode === "fiveBlockNoPair") return m.blocks === 5 && !m.hasPair;
 
     if (mode === "twoShantenFiveBlock") return m.shantenMentsuOnly === 2 && m.blocks === 5 && m.hasPair;
     if (mode === "twoShantenFourBlock") return m.shantenMentsuOnly === 2 && m.blocks === 4 && m.hasPair;
@@ -127,6 +127,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
 
   const onUndo = () => { if (!undoStack.length) return; const prev = undoStack[undoStack.length - 1]; const nowLast = current.river[current.river.length - 1]; const prevLast = prev.state.river[prev.state.river.length - 1]; setUndoDiffMsg(nowLast == null ? "" : `Undo差分: 打牌 ${TILE_LABELS[nowLast]} → ${prevLast == null ? "（打牌前）" : TILE_LABELS[prevLast]}`); setRedoStack((r) => [...r, { state: current, stats }]); setUndoStack((u) => u.slice(0, -1)); setCurrent(prev.state); setStats(prev.stats); resetSelections(); };
   const onRedo = () => { if (!redoStack.length) return; const next = redoStack[redoStack.length - 1]; setUndoStack((u) => [...u, { state: current, stats }]); setRedoStack((r) => r.slice(0, -1)); setCurrent(next.state); setStats(next.stats); setUndoDiffMsg(""); resetSelections(); };
+
 
   const onTileClick = (idx: number) => {
     if (gameEnded) return;
