@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+
 import { calcUkeireForDiscard, classifyMentsuStructure, evaluatePathWeight, generateFiveBlockNoPairHand, makeWall, toCounts, shantenChiitoi, shantenMentsu } from "./mahjong.ts";
+
 
 test("makeWall creates 136 tiles", () => {
   const wall = makeWall();
@@ -73,6 +75,7 @@ test("classify with honor-heavy hand", () => {
 });
 
 
+
 test("classify exposes pair tile candidates and strictNoPair5Block", () => {
   const withPair = [0,1,2,9,10,11,18,19,20,27,27,30,31,32];
   const r1 = classifyMentsuStructure(withPair);
@@ -85,6 +88,7 @@ test("classify exposes pair tile candidates and strictNoPair5Block", () => {
 });
 
 
+
 test("fiveBlockNoPair generator has no duplicate tiles across 100 hands", () => {
   for (let i = 0; i < 100; i++) {
     const hand = generateFiveBlockNoPairHand();
@@ -92,3 +96,4 @@ test("fiveBlockNoPair generator has no duplicate tiles across 100 hands", () => 
     for (let t = 0; t < 34; t++) assert.ok(c[t] <= 1);
   }
 });
+
