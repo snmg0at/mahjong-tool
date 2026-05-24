@@ -5,6 +5,7 @@ import {
   handWithoutIndex,
   isWinningHand,
   makeWall,
+  generateFiveBlockNoPairHand,
   shantenChiitoi,
   shantenMentsu,
 
@@ -53,11 +54,7 @@ function createGameState(mode: Mode): GameState {
 
     // 合意仕様: 「4ブロック雀頭あり」はシャンテン固定せず、形条件のみで開始する
     if (mode === "fourBlockWithPair") return m.blocks === 4 && m.hasPair;
-    if (mode === "fiveBlockNoPair") {
-      const cc = toCounts(fullHand);
-      for (let i = 0; i < 34; i++) if (cc[i] >= 2) return false;
-      return m.strictNoPair5Block;
-    }
+    if (mode === "fiveBlockNoPair") return m.strictNoPair5Block;
 
     if (mode === "twoShantenFiveBlock") return m.shantenMentsuOnly === 2 && m.blocks === 5 && m.hasPair;
     if (mode === "twoShantenFourBlock") return m.shantenMentsuOnly === 2 && m.blocks === 4 && m.hasPair;
@@ -65,7 +62,21 @@ function createGameState(mode: Mode): GameState {
     return true;
   };
 
+
   if (mode === "random") return fromRandomDeal();
+  if (mode === "fiveBlockNoPair") {
+    const hand14 = generateFiveBlockNoPairHand();
+    const wall = makeWall();
+    for (const t of hand14) {
+      const ix = wall.indexOf(t);
+      if (ix >= 0) wall.splice(ix, 1);
+    }
+    const shuffled = [...hand14].sort(() => Math.random() - 0.5);
+    const draw = shuffled.pop() ?? null;
+    const hand13 = shuffled.sort(sortTiles);
+    return { wall, hand13, drawTile: draw, river: [], turn: 1, resultMsg: "", gameEnded: false, lastReview: null };
+  }
+
 
   for (let i = 0; i < 8000; i++) {
     const state = fromRandomDeal();

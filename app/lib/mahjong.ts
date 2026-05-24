@@ -157,6 +157,58 @@ export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
   return { blocks: Math.max(0, bestBlocks), hasPair: bestHasPair, shantenMentsuOnly: shantenMentsu(hand), melds: Math.max(0, bestMeld), taatsu: Math.max(0, bestTaatsu), pairUsed: bestPairUsed, pairTileCandidates, strictNoPair5Block };
 
 }
+
+
+export function generateFiveBlockNoPairHand(maxTry = 20000): Tile[] {
+  const taatsuPairs: Array<[number, number]> = [];
+  for (const base of [0, 9, 18]) {
+    for (let i = base; i <= base + 7; i++) taatsuPairs.push([i, i + 1]);
+    for (let i = base; i <= base + 6; i++) taatsuPairs.push([i, i + 2]);
+  }
+
+  const hasAnySequence = (tiles: Tile[]): boolean => {
+    const c = toCounts(tiles);
+    for (const base of [0, 9, 18]) {
+      for (let i = base; i <= base + 6; i++) {
+        if (c[i] > 0 && c[i + 1] > 0 && c[i + 2] > 0) return true;
+      }
+    }
+    return false;
+  };
+
+  for (let attempt = 0; attempt < maxTry; attempt++) {
+    const used = new Set<number>();
+    const blocks: Tile[] = [];
+    const pairs = [...taatsuPairs].sort(() => Math.random() - 0.5);
+
+    for (const [a, b] of pairs) {
+      if (used.has(a) || used.has(b)) continue;
+      used.add(a);
+      used.add(b);
+      blocks.push(a, b);
+      if (blocks.length === 10) break;
+    }
+    if (blocks.length !== 10) continue;
+
+    const restCandidates: Tile[] = [];
+    for (let t = 0; t < 34; t++) if (!used.has(t)) restCandidates.push(t);
+    restCandidates.sort(() => Math.random() - 0.5);
+    const singles = restCandidates.slice(0, 4);
+    if (singles.length < 4) continue;
+
+    const hand = [...blocks, ...singles].sort(sortTiles);
+    const c = toCounts(hand);
+    let hasDup = false;
+    for (let i = 0; i < 34; i++) if (c[i] >= 2) { hasDup = true; break; }
+    if (hasDup) continue;
+    if (hasAnySequence(hand)) continue;
+
+    return hand;
+  }
+
+  throw new Error("failed to generate fiveBlockNoPair hand");
+
+}
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
   let best = 8;
