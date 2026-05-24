@@ -35,6 +35,13 @@ export type MentsuStructure = {
   blocks: number;
   hasPair: boolean;
   shantenMentsuOnly: number;
+
+  melds: number;
+  taatsu: number;
+  pairUsed: 0 | 1;
+  pairTileCandidates: number[];
+  strictNoPair5Block: boolean;
+
 };
 
 /**
@@ -47,9 +54,11 @@ export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
   const c = toCounts(hand);
   let bestMeld = -1;
   let bestShanten = 99;
-
   let bestBlocks = -1;
   let bestHasPair = false;
+  let bestTaatsu = 0;
+  let bestPairUsed: 0 | 1 = 0;
+
 
   function update(meld: number, taatsu: number, pair: number) {
     const mm = Math.min(meld, 4);
@@ -60,13 +69,17 @@ export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
     const shanten = 8 - mm * 2 - tt - pp;
 
     if (mm > bestMeld) {
-      bestMeld = mm; bestShanten = shanten; bestBlocks = blocks; bestHasPair = pp > 0;
+
+      bestMeld = mm; bestShanten = shanten; bestBlocks = blocks; bestHasPair = pp > 0; bestTaatsu = tt; bestPairUsed = pp as 0 | 1;
+
       return;
     }
     if (mm < bestMeld) return;
 
     if (shanten < bestShanten) {
-      bestShanten = shanten; bestBlocks = blocks; bestHasPair = pp > 0;
+
+      bestShanten = shanten; bestBlocks = blocks; bestHasPair = pp > 0; bestTaatsu = tt; bestPairUsed = pp as 0 | 1;
+
       return;
     }
     if (shanten > bestShanten) return;
@@ -74,11 +87,16 @@ export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
     if (pp > 0 && !bestHasPair) {
       bestBlocks = blocks;
       bestHasPair = true;
+
+      bestTaatsu = tt;
+      bestPairUsed = 1;
+
       return;
     }
     if (bestHasPair && pp === 0) return;
 
-    if (blocks > bestBlocks) bestBlocks = blocks;
+
+    if (blocks > bestBlocks) { bestBlocks = blocks; bestTaatsu = tt; bestPairUsed = pp as 0 | 1; }
 
   }
 
@@ -131,7 +149,12 @@ export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
   }
 
   dfs(0, 0, 0, 0);
-  return { blocks: Math.max(0, bestBlocks), hasPair: bestHasPair, shantenMentsuOnly: shantenMentsu(hand) };
+
+  const counts = toCounts(hand);
+  const pairTileCandidates: number[] = [];
+  for (let i = 0; i < 34; i++) if (counts[i] === 2) pairTileCandidates.push(i);
+  const strictNoPair5Block = Math.max(0, bestBlocks) === 5 && bestPairUsed === 0 && pairTileCandidates.length === 0;
+  return { blocks: Math.max(0, bestBlocks), hasPair: bestHasPair, shantenMentsuOnly: shantenMentsu(hand), melds: Math.max(0, bestMeld), taatsu: Math.max(0, bestTaatsu), pairUsed: bestPairUsed, pairTileCandidates, strictNoPair5Block };
 
 }
 export function shantenMentsu(hand: Tile[]): number {
