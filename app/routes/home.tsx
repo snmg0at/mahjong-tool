@@ -47,7 +47,7 @@ function createGameState(mode: Mode): GameState {
     if (mode === "fiveBlockWithPair") return m.blocks === 5 && m.hasPair;
     // 合意仕様: 「4ブロック雀頭あり」はシャンテン固定せず、形条件のみで開始する
     if (mode === "fourBlockWithPair") return m.blocks === 4 && m.hasPair;
-    if (mode === "fiveBlockNoPair") return m.blocks === 5 && !m.hasPair;
+    if (mode === "fiveBlockNoPair") return m.blocks === 5 && !m.hasPair && (() => { const cc = toCounts(fullHand); for (let i = 0; i < 34; i++) if (cc[i] >= 2) return false; return true; })();
     if (mode === "twoShantenFiveBlock") return m.shantenMentsuOnly === 2 && m.blocks === 5 && m.hasPair;
     if (mode === "twoShantenFourBlock") return m.shantenMentsuOnly === 2 && m.blocks === 4 && m.hasPair;
     if (mode === "twoShantenNoPair") return m.shantenMentsuOnly === 2 && !m.hasPair;
