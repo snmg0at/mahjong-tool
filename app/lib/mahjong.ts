@@ -30,6 +30,112 @@ export function toCounts(hand: Tile[]) {
   return c;
 }
 
+
+export type MentsuStructure = {
+  blocks: number;
+  hasPair: boolean;
+  shantenMentsuOnly: number;
+  melds: number;
+  taatsu: number;
+  pairUsed: 0 | 1;
+};
+
+/**
+ * Skeleton classifier for advanced mentsu-structure modes.
+ * NOTE: Step1 only adds the interface/foundation; strict classification
+ * will be implemented in a later step.
+ */
+export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
+  const c = toCounts(hand);
+  let bestMeld = -1;
+  let bestShanten = 99;
+  let bestBlocks = -1;
+  let bestHasPair = false;
+  let bestTaatsu = 0;
+  let bestPairUsed: 0 | 1 = 0;
+
+  function update(meld: number, taatsu: number, pair: number) {
+    const mm = Math.min(meld, 4);
+    const tt = Math.min(taatsu, 4 - mm);
+    const pp = pair > 0 ? 1 : 0;
+    const blocks = mm + tt + pp;
+    const shanten = 8 - mm * 2 - tt - pp;
+
+    if (mm > bestMeld) {
+      bestMeld = mm; bestShanten = shanten; bestBlocks = blocks; bestHasPair = pp > 0; bestTaatsu = tt; bestPairUsed = pp as 0 | 1;
+      return;
+    }
+    if (mm < bestMeld) return;
+
+    if (shanten < bestShanten) {
+      bestShanten = shanten; bestBlocks = blocks; bestHasPair = pp > 0; bestTaatsu = tt; bestPairUsed = pp as 0 | 1;
+      return;
+    }
+    if (shanten > bestShanten) return;
+
+    if (pp > 0 && !bestHasPair) {
+      bestBlocks = blocks;
+      bestHasPair = true;
+      bestTaatsu = tt;
+      bestPairUsed = 1;
+      return;
+    }
+    if (bestHasPair && pp === 0) return;
+
+    if (blocks > bestBlocks) { bestBlocks = blocks; bestTaatsu = tt; bestPairUsed = pp as 0 | 1; }
+  }
+
+  function dfs(idx: number, meld: number, taatsu: number, pair: number) {
+    while (idx < 34 && c[idx] === 0) idx++;
+    if (idx >= 34) {
+      update(meld, taatsu, pair);
+      return;
+    }
+
+    if (c[idx] >= 3) {
+      c[idx] -= 3;
+      dfs(idx, meld + 1, taatsu, pair);
+      c[idx] += 3;
+    }
+
+    if (idx <= 26 && idx % 9 <= 6 && c[idx + 1] > 0 && c[idx + 2] > 0) {
+      c[idx]--; c[idx + 1]--; c[idx + 2]--;
+      dfs(idx, meld + 1, taatsu, pair);
+      c[idx]++; c[idx + 1]++; c[idx + 2]++;
+    }
+
+    if (pair === 0 && c[idx] >= 2) {
+      c[idx] -= 2;
+      dfs(idx, meld, taatsu, 1);
+      c[idx] += 2;
+    }
+
+    if (c[idx] >= 2) {
+      c[idx] -= 2;
+      dfs(idx, meld, taatsu + 1, pair);
+      c[idx] += 2;
+    }
+
+    if (idx <= 26 && idx % 9 <= 7 && c[idx + 1] > 0) {
+      c[idx]--; c[idx + 1]--;
+      dfs(idx, meld, taatsu + 1, pair);
+      c[idx]++; c[idx + 1]++;
+    }
+
+    if (idx <= 26 && idx % 9 <= 6 && c[idx + 2] > 0) {
+      c[idx]--; c[idx + 2]--;
+      dfs(idx, meld, taatsu + 1, pair);
+      c[idx]++; c[idx + 2]++;
+    }
+
+    c[idx]--;
+    dfs(idx, meld, taatsu, pair);
+    c[idx]++;
+  }
+
+  dfs(0, 0, 0, 0);
+  return { blocks: Math.max(0, bestBlocks), hasPair: bestHasPair, shantenMentsuOnly: shantenMentsu(hand), melds: Math.max(0, bestMeld), taatsu: Math.max(0, bestTaatsu), pairUsed: bestPairUsed };
+}
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
   let best = 8;
@@ -151,11 +257,8 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
   const baseM = shantenMentsu(base13);
   const baseC = shantenChiitoi(base13);
-  const baseBest = Math.min(baseM, baseC);
-
-
-  let bestKinds = 0;
-  let bestCount = 0;
+  let mKinds = 0;
+  let mCount = 0;
 
   let cKinds = 0;
   let cCount = 0;
@@ -167,11 +270,9 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
     const m = shantenMentsu(next);
     const c = shantenChiitoi(next);
-    const best = Math.min(m, c);
-
-    if (best < baseBest) {
-      bestKinds++;
-      bestCount += rem;
+    if (m < baseM) {
+      mKinds++;
+      mCount += rem;
     }
 
     if (c < baseC) {
@@ -180,7 +281,7 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
     }
   }
 
-  return { mentsuKinds: bestKinds, mentsuCount: bestCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
+  return { mentsuKinds: mKinds, mentsuCount: mCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
 }
 
 export function evaluatePathWeight(hand: Tile[]) {
