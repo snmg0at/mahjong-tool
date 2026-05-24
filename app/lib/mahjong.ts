@@ -38,6 +38,8 @@ export type MentsuStructure = {
   melds: number;
   taatsu: number;
   pairUsed: 0 | 1;
+  pairTileCandidates: number[];
+  strictNoPair5Block: boolean;
 };
 
 /**
@@ -134,7 +136,11 @@ export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
   }
 
   dfs(0, 0, 0, 0);
-  return { blocks: Math.max(0, bestBlocks), hasPair: bestHasPair, shantenMentsuOnly: shantenMentsu(hand), melds: Math.max(0, bestMeld), taatsu: Math.max(0, bestTaatsu), pairUsed: bestPairUsed };
+  const counts = toCounts(hand);
+  const pairTileCandidates: number[] = [];
+  for (let i = 0; i < 34; i++) if (counts[i] === 2) pairTileCandidates.push(i);
+  const strictNoPair5Block = Math.max(0, bestBlocks) === 5 && bestPairUsed === 0 && pairTileCandidates.length === 0;
+  return { blocks: Math.max(0, bestBlocks), hasPair: bestHasPair, shantenMentsuOnly: shantenMentsu(hand), melds: Math.max(0, bestMeld), taatsu: Math.max(0, bestTaatsu), pairUsed: bestPairUsed, pairTileCandidates, strictNoPair5Block };
 }
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
