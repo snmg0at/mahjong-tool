@@ -73,6 +73,7 @@ test("classify with honor-heavy hand", () => {
 });
 
 
+
 test("classify exposes pair tile candidates and strictNoPair5Block", () => {
   const withPair = [0,1,2,9,10,11,18,19,20,27,27,30,31,32];
   const r1 = classifyMentsuStructure(withPair);
@@ -83,3 +84,4 @@ test("classify exposes pair tile candidates and strictNoPair5Block", () => {
   const r2 = classifyMentsuStructure(noExactPair);
   assert.equal(r2.pairTileCandidates.length, 0);
 });
+
