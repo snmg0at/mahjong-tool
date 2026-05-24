@@ -21,12 +21,13 @@ import {
 
 const MAX_TURNS = 18;
 
-type Mode = "random" | "twoShanten" | "fiveBlockWithPair" | "fourBlockWithPair" | "fiveBlockNoPair" | "twoShantenFiveBlock" | "twoShantenFourBlock" | "twoShantenNoPair";
+type Mode = "random" | "randomSanma" | "twoShanten" | "fiveBlockWithPair" | "fourBlockWithPair" | "fiveBlockNoPair" | "twoShantenFiveBlock" | "twoShantenFourBlock" | "twoShantenNoPair";
 const ADVANCED_MODES: Mode[] = ["fiveBlockWithPair", "fourBlockWithPair", "fiveBlockNoPair", "twoShantenFiveBlock", "twoShantenFourBlock", "twoShantenNoPair"];
 const isAdvancedMode = (mode: Mode): boolean => ADVANCED_MODES.includes(mode);
-
 const modeLabel = (mode: Mode): string => {
   if (mode === "random") return "通常配牌モード";
+  if (mode === "randomSanma") return "三麻配牌モード";
+
   if (mode === "twoShanten") return "二向聴チャレンジ";
   if (mode === "fiveBlockWithPair") return "5ブロック雀頭あり";
   if (mode === "fourBlockWithPair") return "4ブロック雀頭あり";
@@ -41,10 +42,14 @@ type LastDiscardReview = { discard: Tile; mentsuKinds: number; mentsuCount: numb
 type GameState = { wall: Tile[]; hand13: Tile[]; drawTile: Tile | null; river: Tile[]; turn: number; resultMsg: string; gameEnded: boolean; lastReview: LastDiscardReview | null };
 
 function createGameState(mode: Mode): GameState {
-  const fromRandomDeal = (): GameState => {
-    const w = makeWall(); const hand13 = w.splice(w.length - 13, 13).sort(sortTiles); const draw = w.pop();
+
+  const fromRandomDeal = (wallFactory: () => Tile[] = makeWall): GameState => {
+    const w = wallFactory(); const hand13 = w.splice(w.length - 13, 13).sort(sortTiles); const draw = w.pop();
     return { wall: w, hand13, drawTile: draw ?? null, river: [], turn: 1, resultMsg: "", gameEnded: false, lastReview: null };
   };
+
+  const makeSanmaWall = (): Tile[] => makeWall().filter((t) => t === 0 || t >= 8);
+
 
   const matchesMode = (fullHand: Tile[]): boolean => {
     const m = classifyMentsuStructure(fullHand);
@@ -64,6 +69,8 @@ function createGameState(mode: Mode): GameState {
 
 
   if (mode === "random") return fromRandomDeal();
+  if (mode === "randomSanma") return fromRandomDeal(makeSanmaWall);
+
   if (mode === "fiveBlockNoPair") {
     const hand14 = generateFiveBlockNoPairHand();
     const wall = makeWall();
@@ -102,7 +109,7 @@ export default function Home() {
   const [mode, setMode] = useState<Mode | null>(null);
 
   if (mode == null) {
-    return <main style={{ maxWidth: 920, margin: "8px auto", padding: "0 8px", color: "#f5f5f5", fontFamily: "sans-serif" }}><h1 style={{ fontSize: 22 }}>麻雀 牌効率ゲーム</h1><div style={{ display: "grid", gap: 12 }}><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>通常</h2><button onClick={() => setMode("random")} style={{ padding: "12px", fontWeight: 700 }}>通常配牌モード</button><button onClick={() => setMode("twoShanten")} style={{ padding: "12px", fontWeight: 700 }}>二向聴チャレンジ</button></section><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>上級</h2><button onClick={() => setMode("fiveBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭あり</button><button onClick={() => setMode("fourBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>4ブロック雀頭あり</button><button onClick={() => setMode("fiveBlockNoPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭なし</button><button onClick={() => setMode("twoShantenFiveBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴5ブロック</button><button onClick={() => setMode("twoShantenFourBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴4ブロック</button><button onClick={() => setMode("twoShantenNoPair")} style={{ padding: "12px", fontWeight: 700 }}>二向聴雀頭なし</button></section></div></main>;
+    return <main style={{ maxWidth: 920, margin: "8px auto", padding: "0 8px", color: "#f5f5f5", fontFamily: "sans-serif" }}><h1 style={{ fontSize: 22 }}>麻雀 牌効率ゲーム</h1><div style={{ display: "grid", gap: 12 }}><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>通常</h2><button onClick={() => setMode("random")} style={{ padding: "12px", fontWeight: 700 }}>通常配牌モード</button><button onClick={() => setMode("randomSanma")} style={{ padding: "12px", fontWeight: 700 }}>三麻配牌モード</button><button onClick={() => setMode("twoShanten")} style={{ padding: "12px", fontWeight: 700 }}>二向聴チャレンジ</button></section><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>上級</h2><button onClick={() => setMode("fiveBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭あり</button><button onClick={() => setMode("fourBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>4ブロック雀頭あり</button><button onClick={() => setMode("fiveBlockNoPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭なし</button><button onClick={() => setMode("twoShantenFiveBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴5ブロック</button><button onClick={() => setMode("twoShantenFourBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴4ブロック</button><button onClick={() => setMode("twoShantenNoPair")} style={{ padding: "12px", fontWeight: 700 }}>二向聴雀頭なし</button></section></div></main>;
   }
 
   return <GameScreen mode={mode} onBackToMenu={() => setMode(null)} />;
