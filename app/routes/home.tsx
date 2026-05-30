@@ -5,10 +5,12 @@ import {
   handWithoutIndex,
   isWinningHand,
   makeWall,
+
+  makeSanmaWall,
   generateFiveBlockNoPairHand,
+  SANMA_ALLOWED_TILES,
   shantenChiitoi,
   shantenMentsu,
-
   classifyMentsuStructure,
 
   sortTiles,
@@ -52,7 +54,8 @@ function createGameState(ruleSet: RuleSet, mode: Mode): GameState {
     return { wall: w, hand13, drawTile: draw ?? null, river: [], turn: 1, resultMsg: "", gameEnded: false, lastReview: null };
   };
 
-  const makeSanmaWall = (): Tile[] => makeWall().filter((t) => t === 0 || t >= 8);
+
+  const wallFactory = ruleSet === "sanma" ? makeSanmaWall : makeWall;
 
 
   const matchesMode = (fullHand: Tile[]): boolean => {
@@ -69,10 +72,12 @@ function createGameState(ruleSet: RuleSet, mode: Mode): GameState {
     return true;
   };
 
-  if (mode === "random") return fromRandomDeal(ruleSet === "sanma" ? makeSanmaWall : makeWall);
+
+  if (mode === "random") return fromRandomDeal(wallFactory);
   if (mode === "fiveBlockNoPair") {
-    const hand14 = generateFiveBlockNoPairHand();
-    const wall = makeWall();
+    const hand14 = ruleSet === "sanma" ? generateFiveBlockNoPairHand(20000, SANMA_ALLOWED_TILES) : generateFiveBlockNoPairHand();
+    const wall = wallFactory();
+
     for (const t of hand14) {
       const ix = wall.indexOf(t);
       if (ix >= 0) wall.splice(ix, 1);
@@ -85,11 +90,11 @@ function createGameState(ruleSet: RuleSet, mode: Mode): GameState {
 
 
   for (let i = 0; i < 8000; i++) {
-    const state = fromRandomDeal();
+    const state = fromRandomDeal(wallFactory);
     if (state.drawTile == null) continue;
     if (matchesMode([...state.hand13, state.drawTile])) return state;
   }
-  return fromRandomDeal();
+  return fromRandomDeal(wallFactory);
 }
 
 
@@ -148,12 +153,10 @@ function GameScreen({ ruleSet, mode, onBackToMenu }: { ruleSet: RuleSet; mode: M
   const resetSelections = () => { setSelectedIdx(null); setSelectedUke(null); setSelectedWaitInfo(null); };
 
   const startNextGame = () => { setCurrent(createGameState(ruleSet, mode)); setUndoStack([]); setRedoStack([]); resetSelections(); setUndoDiffMsg(""); };
-
   const calcWaitInfoForDiscard = (hand14: Tile[], discardIdx: number) => { const next13 = handWithoutIndex(hand14, discardIdx).sort(sortTiles); const waits: Tile[] = []; for (let t = 0; t < 34; t++) if (isWinningHand([...next13, t])) waits.push(t); if (waits.length === 0) return null; const counts = Array(34).fill(0); for (const t of next13) counts[t]++; let total = 0; for (const t of waits) total += Math.max(0, 4 - counts[t]); return { labels: waits.map((t) => TILE_LABELS[t]), total }; };
 
   const onUndo = () => { if (!undoStack.length) return; const prev = undoStack[undoStack.length - 1]; const nowLast = current.river[current.river.length - 1]; const prevLast = prev.state.river[prev.state.river.length - 1]; setUndoDiffMsg(nowLast == null ? "" : `Undo差分: 打牌 ${TILE_LABELS[nowLast]} → ${prevLast == null ? "（打牌前）" : TILE_LABELS[prevLast]}`); setRedoStack((r) => [...r, { state: current, stats }]); setUndoStack((u) => u.slice(0, -1)); setCurrent(prev.state); setStats(prev.stats); resetSelections(); };
   const onRedo = () => { if (!redoStack.length) return; const next = redoStack[redoStack.length - 1]; setUndoStack((u) => [...u, { state: current, stats }]); setRedoStack((r) => r.slice(0, -1)); setCurrent(next.state); setStats(next.stats); setUndoDiffMsg(""); resetSelections(); };
-
 
   const onTileClick = (idx: number) => {
     if (gameEnded) return;

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { calcUkeireForDiscard, classifyMentsuStructure, evaluatePathWeight, generateFiveBlockNoPairHand, makeWall, toCounts, shantenChiitoi, shantenMentsu } from "./mahjong.ts";
+import { calcUkeireForDiscard, classifyMentsuStructure, evaluatePathWeight, generateFiveBlockNoPairHand, isSanmaTile, makeSanmaWall, makeWall, SANMA_ALLOWED_TILES, toCounts, shantenChiitoi, shantenMentsu } from "./mahjong.ts";
 
 
 test("makeWall creates 136 tiles", () => {
@@ -92,6 +92,23 @@ test("classify exposes pair tile candidates and strictNoPair5Block", () => {
 test("fiveBlockNoPair generator has no duplicate tiles across 100 hands", () => {
   for (let i = 0; i < 100; i++) {
     const hand = generateFiveBlockNoPairHand();
+    const c = toCounts(hand);
+    for (let t = 0; t < 34; t++) assert.ok(c[t] <= 1);
+  }
+});
+
+
+
+test("sanma wall excludes 2m through 8m", () => {
+  const wall = makeSanmaWall();
+  assert.equal(wall.length, 108);
+  assert.ok(wall.every(isSanmaTile));
+});
+
+test("sanma fiveBlockNoPair generator excludes 2m through 8m", () => {
+  for (let i = 0; i < 100; i++) {
+    const hand = generateFiveBlockNoPairHand(20000, SANMA_ALLOWED_TILES);
+    assert.ok(hand.every(isSanmaTile));
     const c = toCounts(hand);
     for (let t = 0; t < 34; t++) assert.ok(c[t] <= 1);
   }

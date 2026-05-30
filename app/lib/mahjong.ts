@@ -24,6 +24,13 @@ export function makeWall(): Tile[] {
   return wall;
 }
 
+export const ALL_TILES: Tile[] = Array.from({ length: 34 }, (_, t) => t);
+export const SANMA_ALLOWED_TILES: Tile[] = ALL_TILES.filter((t) => t === 0 || t >= 8);
+
+export function isSanmaTile(tile: Tile): boolean { return tile === 0 || tile >= 8; }
+
+export function makeSanmaWall(): Tile[] { return makeWall().filter(isSanmaTile); }
+
 export function toCounts(hand: Tile[]) {
   const c = Array(34).fill(0);
   for (const t of hand) c[t]++;
@@ -159,11 +166,13 @@ export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
 }
 
 
-export function generateFiveBlockNoPairHand(maxTry = 20000): Tile[] {
+export function generateFiveBlockNoPairHand(maxTry = 20000, allowedTiles: Tile[] = ALL_TILES): Tile[] {
+  const allowed = new Set(allowedTiles);
   const taatsuPairs: Array<[number, number]> = [];
   for (const base of [0, 9, 18]) {
-    for (let i = base; i <= base + 7; i++) taatsuPairs.push([i, i + 1]);
-    for (let i = base; i <= base + 6; i++) taatsuPairs.push([i, i + 2]);
+    for (let i = base; i <= base + 7; i++) if (allowed.has(i) && allowed.has(i + 1)) taatsuPairs.push([i, i + 1]);
+    for (let i = base; i <= base + 6; i++) if (allowed.has(i) && allowed.has(i + 2)) taatsuPairs.push([i, i + 2]);
+
   }
 
   const hasAnySequence = (tiles: Tile[]): boolean => {
@@ -191,7 +200,9 @@ export function generateFiveBlockNoPairHand(maxTry = 20000): Tile[] {
     if (blocks.length !== 10) continue;
 
     const restCandidates: Tile[] = [];
-    for (let t = 0; t < 34; t++) if (!used.has(t)) restCandidates.push(t);
+
+    for (const t of allowedTiles) if (!used.has(t)) restCandidates.push(t);
+
     restCandidates.sort(() => Math.random() - 0.5);
     const singles = restCandidates.slice(0, 4);
     if (singles.length < 4) continue;
