@@ -5,10 +5,10 @@ import {
   handWithoutIndex,
   isWinningHand,
   makeWall,
-
+  
   makeSanmaWall,
   generateFiveBlockNoPairHand,
-  SANMA_ALLOWED_TILES,
+  generateSanmaFiveBlockNoPairHand,
   shantenChiitoi,
   shantenMentsu,
   classifyMentsuStructure,
@@ -75,7 +75,7 @@ function createGameState(ruleSet: RuleSet, mode: Mode): GameState {
 
   if (mode === "random") return fromRandomDeal(wallFactory);
   if (mode === "fiveBlockNoPair") {
-    const hand14 = ruleSet === "sanma" ? generateFiveBlockNoPairHand(20000, SANMA_ALLOWED_TILES) : generateFiveBlockNoPairHand();
+    const hand14 = ruleSet === "sanma" ? generateSanmaFiveBlockNoPairHand() : generateFiveBlockNoPairHand();
     const wall = wallFactory();
 
     for (const t of hand14) {

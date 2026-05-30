@@ -175,15 +175,6 @@ export function generateFiveBlockNoPairHand(maxTry = 20000, allowedTiles: Tile[]
 
   }
 
-  const hasAnySequence = (tiles: Tile[]): boolean => {
-    const c = toCounts(tiles);
-    for (const base of [0, 9, 18]) {
-      for (let i = base; i <= base + 6; i++) {
-        if (c[i] > 0 && c[i + 1] > 0 && c[i + 2] > 0) return true;
-      }
-    }
-    return false;
-  };
 
   for (let attempt = 0; attempt < maxTry; attempt++) {
     const used = new Set<number>();
@@ -220,6 +211,61 @@ export function generateFiveBlockNoPairHand(maxTry = 20000, allowedTiles: Tile[]
   throw new Error("failed to generate fiveBlockNoPair hand");
 
 }
+
+const SANMA_FLOATING_TILES: Tile[] = [0, 8, 27, 28, 29, 30, 31, 32, 33];
+const SANMA_THREE_BLOCK_PATTERNS: Array<Array<[number, number]>> = [
+  [[1, 3], [5, 6], [8, 9]],
+  [[1, 2], [4, 6], [8, 9]],
+  [[1, 2], [4, 5], [7, 9]],
+  [[1, 3], [4, 6], [8, 9]],
+];
+const SANMA_TWO_BLOCK_PATTERNS: Array<Array<[number, number]>> = [
+  [[1, 3], [6, 8]],
+  [[1, 2], [7, 9]],
+  [[2, 4], [7, 9]],
+  [[1, 3], [7, 8]],
+];
+
+function shuffled<T>(items: T[]): T[] { return [...items].sort(() => Math.random() - 0.5); }
+
+function hasAnySequence(tiles: Tile[]): boolean {
+  const c = toCounts(tiles);
+  for (const base of [0, 9, 18]) {
+    for (let i = base; i <= base + 6; i++) {
+      if (c[i] > 0 && c[i + 1] > 0 && c[i + 2] > 0) return true;
+    }
+  }
+  return false;
+}
+
+function sanmaPatternTiles(base: number, pattern: Array<[number, number]>): Tile[] {
+  return pattern.flatMap(([a, b]) => [base + a - 1, base + b - 1]);
+}
+
+export function generateSanmaFiveBlockNoPairHand(maxTry = 20000): Tile[] {
+  for (let attempt = 0; attempt < maxTry; attempt++) {
+    const pinGetsThreeBlocks = Math.random() < 0.5;
+    const threeBlockPattern = shuffled(SANMA_THREE_BLOCK_PATTERNS)[0];
+    const twoBlockPattern = shuffled(SANMA_TWO_BLOCK_PATTERNS)[0];
+    const pinBlocks = sanmaPatternTiles(9, pinGetsThreeBlocks ? threeBlockPattern : twoBlockPattern);
+    const souBlocks = sanmaPatternTiles(18, pinGetsThreeBlocks ? twoBlockPattern : threeBlockPattern);
+    const singles = shuffled(SANMA_FLOATING_TILES).slice(0, 4);
+    const hand = [...pinBlocks, ...souBlocks, ...singles].sort(sortTiles);
+    const c = toCounts(hand);
+
+    let hasDup = false;
+    for (let i = 0; i < 34; i++) if (c[i] >= 2) { hasDup = true; break; }
+    if (hasDup) continue;
+    if (hand.some((t) => !isSanmaTile(t))) continue;
+    if (hasAnySequence(hand)) continue;
+
+    return hand;
+  }
+
+  throw new Error("failed to generate sanma fiveBlockNoPair hand");
+}
+
+
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
   let best = 8;

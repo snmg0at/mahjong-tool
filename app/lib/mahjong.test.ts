@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { calcUkeireForDiscard, classifyMentsuStructure, evaluatePathWeight, generateFiveBlockNoPairHand, isSanmaTile, makeSanmaWall, makeWall, SANMA_ALLOWED_TILES, toCounts, shantenChiitoi, shantenMentsu } from "./mahjong.ts";
+import { calcUkeireForDiscard, classifyMentsuStructure, evaluatePathWeight, generateFiveBlockNoPairHand, generateSanmaFiveBlockNoPairHand, isSanmaTile, makeSanmaWall, makeWall, toCounts, shantenChiitoi, shantenMentsu } from "./mahjong.ts";
 
 
 test("makeWall creates 136 tiles", () => {
@@ -105,12 +105,60 @@ test("sanma wall excludes 2m through 8m", () => {
   assert.ok(wall.every(isSanmaTile));
 });
 
-test("sanma fiveBlockNoPair generator excludes 2m through 8m", () => {
+
+function hasCompleteSequence(hand: number[]): boolean {
+  const c = toCounts(hand);
+  for (const base of [0, 9, 18]) {
+    for (let i = base; i <= base + 6; i++) {
+      if (c[i] > 0 && c[i + 1] > 0 && c[i + 2] > 0) return true;
+    }
+  }
+  return false;
+}
+
+function maxDisjointTaatsu(hand: number[]): number {
+  const c = toCounts(hand);
+
+  const dfs = (idx: number): number => {
+    while (idx < 27 && c[idx] === 0) idx++;
+    if (idx >= 27) return 0;
+
+    let best = 0;
+    c[idx]--;
+    best = Math.max(best, dfs(idx));
+    c[idx]++;
+
+    if (idx % 9 <= 7 && c[idx + 1] > 0) {
+      c[idx]--; c[idx + 1]--;
+      best = Math.max(best, 1 + dfs(idx));
+      c[idx]++; c[idx + 1]++;
+    }
+
+    if (idx % 9 <= 6 && c[idx + 2] > 0) {
+      c[idx]--; c[idx + 2]--;
+      best = Math.max(best, 1 + dfs(idx));
+      c[idx]++; c[idx + 2]++;
+    }
+
+    return best;
+  };
+
+  return dfs(0);
+}
+
+test("sanma fiveBlockNoPair generator creates visible separated five blocks", () => {
   for (let i = 0; i < 100; i++) {
-    const hand = generateFiveBlockNoPairHand(20000, SANMA_ALLOWED_TILES);
+    const hand = generateSanmaFiveBlockNoPairHand();
     assert.ok(hand.every(isSanmaTile));
+    assert.equal(hasCompleteSequence(hand), false);
+    assert.equal(maxDisjointTaatsu(hand), 5);
+
     const c = toCounts(hand);
     for (let t = 0; t < 34; t++) assert.ok(c[t] <= 1);
+
+    const pinCount = hand.filter((t) => t >= 9 && t <= 17).length;
+    const souCount = hand.filter((t) => t >= 18 && t <= 26).length;
+    assert.ok((pinCount === 4 && souCount === 6) || (pinCount === 6 && souCount === 4));
   }
 });
 
