@@ -24,12 +24,183 @@ export function makeWall(): Tile[] {
   return wall;
 }
 
+export const ALL_TILES: Tile[] = Array.from({ length: 34 }, (_, t) => t);
+export const SANMA_ALLOWED_TILES: Tile[] = ALL_TILES.filter((t) => t === 0 || t >= 8);
+
+export function isSanmaTile(tile: Tile): boolean { return tile === 0 || tile >= 8; }
+
+export function makeSanmaWall(): Tile[] { return makeWall().filter(isSanmaTile); }
+
 export function toCounts(hand: Tile[]) {
   const c = Array(34).fill(0);
   for (const t of hand) c[t]++;
   return c;
 }
 
+
+export type MentsuStructure = {
+  blocks: number;
+  hasPair: boolean;
+  shantenMentsuOnly: number;
+  melds: number;
+  taatsu: number;
+  pairUsed: 0 | 1;
+  pairTileCandidates: number[];
+  strictNoPair5Block: boolean;
+};
+
+/**
+ * Skeleton classifier for advanced mentsu-structure modes.
+ * NOTE: Step1 only adds the interface/foundation; strict classification
+ * will be implemented in a later step.
+ */
+export function classifyMentsuStructure(hand: Tile[]): MentsuStructure {
+  const c = toCounts(hand);
+  let bestMeld = -1;
+  let bestShanten = 99;
+  let bestBlocks = -1;
+  let bestHasPair = false;
+  let bestTaatsu = 0;
+  let bestPairUsed: 0 | 1 = 0;
+
+  function update(meld: number, taatsu: number, pair: number) {
+    const mm = Math.min(meld, 4);
+    const tt = Math.min(taatsu, 4 - mm);
+    const pp = pair > 0 ? 1 : 0;
+    const blocks = mm + tt + pp;
+    const shanten = 8 - mm * 2 - tt - pp;
+
+    if (mm > bestMeld) {
+      bestMeld = mm; bestShanten = shanten; bestBlocks = blocks; bestHasPair = pp > 0; bestTaatsu = tt; bestPairUsed = pp as 0 | 1;
+      return;
+    }
+    if (mm < bestMeld) return;
+
+    if (shanten < bestShanten) {
+      bestShanten = shanten; bestBlocks = blocks; bestHasPair = pp > 0; bestTaatsu = tt; bestPairUsed = pp as 0 | 1;
+      return;
+    }
+    if (shanten > bestShanten) return;
+
+    if (pp > 0 && !bestHasPair) {
+      bestBlocks = blocks;
+      bestHasPair = true;
+      bestTaatsu = tt;
+      bestPairUsed = 1;
+      return;
+    }
+    if (bestHasPair && pp === 0) return;
+
+    if (blocks > bestBlocks) { bestBlocks = blocks; bestTaatsu = tt; bestPairUsed = pp as 0 | 1; }
+  }
+
+  function dfs(idx: number, meld: number, taatsu: number, pair: number) {
+    while (idx < 34 && c[idx] === 0) idx++;
+    if (idx >= 34) {
+      update(meld, taatsu, pair);
+      return;
+    }
+
+    if (c[idx] >= 3) {
+      c[idx] -= 3;
+      dfs(idx, meld + 1, taatsu, pair);
+      c[idx] += 3;
+    }
+
+    if (idx <= 26 && idx % 9 <= 6 && c[idx + 1] > 0 && c[idx + 2] > 0) {
+      c[idx]--; c[idx + 1]--; c[idx + 2]--;
+      dfs(idx, meld + 1, taatsu, pair);
+      c[idx]++; c[idx + 1]++; c[idx + 2]++;
+    }
+
+    if (pair === 0 && c[idx] >= 2) {
+      c[idx] -= 2;
+      dfs(idx, meld, taatsu, 1);
+      c[idx] += 2;
+    }
+
+    if (c[idx] >= 2) {
+      c[idx] -= 2;
+      dfs(idx, meld, taatsu + 1, pair);
+      c[idx] += 2;
+    }
+
+    if (idx <= 26 && idx % 9 <= 7 && c[idx + 1] > 0) {
+      c[idx]--; c[idx + 1]--;
+      dfs(idx, meld, taatsu + 1, pair);
+      c[idx]++; c[idx + 1]++;
+    }
+
+    if (idx <= 26 && idx % 9 <= 6 && c[idx + 2] > 0) {
+      c[idx]--; c[idx + 2]--;
+      dfs(idx, meld, taatsu + 1, pair);
+      c[idx]++; c[idx + 2]++;
+    }
+
+    c[idx]--;
+    dfs(idx, meld, taatsu, pair);
+    c[idx]++;
+  }
+
+  dfs(0, 0, 0, 0);
+  const counts = toCounts(hand);
+  const pairTileCandidates: number[] = [];
+  for (let i = 0; i < 34; i++) if (counts[i] === 2) pairTileCandidates.push(i);
+  const strictNoPair5Block = Math.max(0, bestBlocks) === 5 && bestPairUsed === 0 && pairTileCandidates.length === 0;
+  return { blocks: Math.max(0, bestBlocks), hasPair: bestHasPair, shantenMentsuOnly: shantenMentsu(hand), melds: Math.max(0, bestMeld), taatsu: Math.max(0, bestTaatsu), pairUsed: bestPairUsed, pairTileCandidates, strictNoPair5Block };
+}
+
+
+export function generateFiveBlockNoPairHand(maxTry = 20000, allowedTiles: Tile[] = ALL_TILES): Tile[] {
+  const allowed = new Set(allowedTiles);
+  const taatsuPairs: Array<[number, number]> = [];
+  for (const base of [0, 9, 18]) {
+    for (let i = base; i <= base + 7; i++) if (allowed.has(i) && allowed.has(i + 1)) taatsuPairs.push([i, i + 1]);
+    for (let i = base; i <= base + 6; i++) if (allowed.has(i) && allowed.has(i + 2)) taatsuPairs.push([i, i + 2]);
+  }
+
+  const hasAnySequence = (tiles: Tile[]): boolean => {
+    const c = toCounts(tiles);
+    for (const base of [0, 9, 18]) {
+      for (let i = base; i <= base + 6; i++) {
+        if (c[i] > 0 && c[i + 1] > 0 && c[i + 2] > 0) return true;
+      }
+    }
+    return false;
+  };
+
+  for (let attempt = 0; attempt < maxTry; attempt++) {
+    const used = new Set<number>();
+    const blocks: Tile[] = [];
+    const pairs = [...taatsuPairs].sort(() => Math.random() - 0.5);
+
+    for (const [a, b] of pairs) {
+      if (used.has(a) || used.has(b)) continue;
+      used.add(a);
+      used.add(b);
+      blocks.push(a, b);
+      if (blocks.length === 10) break;
+    }
+    if (blocks.length !== 10) continue;
+
+    const restCandidates: Tile[] = [];
+    for (const t of allowedTiles) if (!used.has(t)) restCandidates.push(t);
+    restCandidates.sort(() => Math.random() - 0.5);
+    const singles = restCandidates.slice(0, 4);
+    if (singles.length < 4) continue;
+
+    const hand = [...blocks, ...singles].sort(sortTiles);
+    const c = toCounts(hand);
+    let hasDup = false;
+    for (let i = 0; i < 34; i++) if (c[i] >= 2) { hasDup = true; break; }
+    if (hasDup) continue;
+    if (hasAnySequence(hand)) continue;
+
+    return hand;
+  }
+
+  throw new Error("failed to generate fiveBlockNoPair hand");
+}
 export function shantenMentsu(hand: Tile[]): number {
   const c = toCounts(hand);
   let best = 8;
@@ -151,11 +322,8 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
   const baseM = shantenMentsu(base13);
   const baseC = shantenChiitoi(base13);
-  const baseBest = Math.min(baseM, baseC);
-
-
-  let bestKinds = 0;
-  let bestCount = 0;
+  let mKinds = 0;
+  let mCount = 0;
 
   let cKinds = 0;
   let cCount = 0;
@@ -167,11 +335,9 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
 
     const m = shantenMentsu(next);
     const c = shantenChiitoi(next);
-    const best = Math.min(m, c);
-
-    if (best < baseBest) {
-      bestKinds++;
-      bestCount += rem;
+    if (m < baseM) {
+      mKinds++;
+      mCount += rem;
     }
 
     if (c < baseC) {
@@ -180,7 +346,7 @@ export function calcUkeireForDiscard(hand14: Tile[], discardIdx: number): Ukeire
     }
   }
 
-  return { mentsuKinds: bestKinds, mentsuCount: bestCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
+  return { mentsuKinds: mKinds, mentsuCount: mCount, chiitoiKinds: cKinds, chiitoiCount: cCount };
 }
 
 export function evaluatePathWeight(hand: Tile[]) {
