@@ -21,12 +21,13 @@ import {
 
 const MAX_TURNS = 18;
 
-type Mode = "random" | "randomSanma" | "twoShanten" | "fiveBlockWithPair" | "fourBlockWithPair" | "fiveBlockNoPair" | "twoShantenFiveBlock" | "twoShantenFourBlock" | "twoShantenNoPair";
+type RuleSet = "yonma" | "sanma";
+type Mode = "random" | "twoShanten" | "fiveBlockWithPair" | "fourBlockWithPair" | "fiveBlockNoPair" | "twoShantenFiveBlock" | "twoShantenFourBlock" | "twoShantenNoPair";
+
 const ADVANCED_MODES: Mode[] = ["fiveBlockWithPair", "fourBlockWithPair", "fiveBlockNoPair", "twoShantenFiveBlock", "twoShantenFourBlock", "twoShantenNoPair"];
 const isAdvancedMode = (mode: Mode): boolean => ADVANCED_MODES.includes(mode);
 const modeLabel = (mode: Mode): string => {
   if (mode === "random") return "通常配牌モード";
-  if (mode === "randomSanma") return "三麻配牌モード";
 
   if (mode === "twoShanten") return "二向聴チャレンジ";
   if (mode === "fiveBlockWithPair") return "5ブロック雀頭あり";
@@ -41,7 +42,10 @@ type ReviewItem = { tile: Tile; mKinds: number; mCount: number; nextShanten: num
 type LastDiscardReview = { discard: Tile; mentsuKinds: number; mentsuCount: number; top3: ReviewItem[] };
 type GameState = { wall: Tile[]; hand13: Tile[]; drawTile: Tile | null; river: Tile[]; turn: number; resultMsg: string; gameEnded: boolean; lastReview: LastDiscardReview | null };
 
-function createGameState(mode: Mode): GameState {
+
+function ruleSetLabel(ruleSet: RuleSet): string { return ruleSet === "yonma" ? "四麻" : "三麻"; }
+
+function createGameState(ruleSet: RuleSet, mode: Mode): GameState {
 
   const fromRandomDeal = (wallFactory: () => Tile[] = makeWall): GameState => {
     const w = wallFactory(); const hand13 = w.splice(w.length - 13, 13).sort(sortTiles); const draw = w.pop();
@@ -56,21 +60,16 @@ function createGameState(mode: Mode): GameState {
     const minShanten = Math.min(shantenMentsu(fullHand), shantenChiitoi(fullHand));
     if (mode === "twoShanten") return minShanten === 2;
     if (mode === "fiveBlockWithPair") return m.blocks === 5 && m.hasPair;
-
     // 合意仕様: 「4ブロック雀頭あり」はシャンテン固定せず、形条件のみで開始する
     if (mode === "fourBlockWithPair") return m.blocks === 4 && m.hasPair;
     if (mode === "fiveBlockNoPair") return m.strictNoPair5Block;
-
     if (mode === "twoShantenFiveBlock") return m.shantenMentsuOnly === 2 && m.blocks === 5 && m.hasPair;
     if (mode === "twoShantenFourBlock") return m.shantenMentsuOnly === 2 && m.blocks === 4 && m.hasPair;
     if (mode === "twoShantenNoPair") return m.shantenMentsuOnly === 2 && !m.hasPair;
     return true;
   };
 
-
-  if (mode === "random") return fromRandomDeal();
-  if (mode === "randomSanma") return fromRandomDeal(makeSanmaWall);
-
+  if (mode === "random") return fromRandomDeal(ruleSet === "sanma" ? makeSanmaWall : makeWall);
   if (mode === "fiveBlockNoPair") {
     const hand14 = generateFiveBlockNoPairHand();
     const wall = makeWall();
@@ -106,18 +105,22 @@ function breaksCompletedMeldShape(base13: Tile[], discard: Tile): boolean {
 }
 
 export default function Home() {
+
+  const [ruleSet, setRuleSet] = useState<RuleSet | null>(null);
   const [mode, setMode] = useState<Mode | null>(null);
 
-  if (mode == null) {
-    return <main style={{ maxWidth: 920, margin: "8px auto", padding: "0 8px", color: "#f5f5f5", fontFamily: "sans-serif" }}><h1 style={{ fontSize: 22 }}>麻雀 牌効率ゲーム</h1><div style={{ display: "grid", gap: 12 }}><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>通常</h2><button onClick={() => setMode("random")} style={{ padding: "12px", fontWeight: 700 }}>通常配牌モード</button><button onClick={() => setMode("randomSanma")} style={{ padding: "12px", fontWeight: 700 }}>三麻配牌モード</button><button onClick={() => setMode("twoShanten")} style={{ padding: "12px", fontWeight: 700 }}>二向聴チャレンジ</button></section><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>上級</h2><button onClick={() => setMode("fiveBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭あり</button><button onClick={() => setMode("fourBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>4ブロック雀頭あり</button><button onClick={() => setMode("fiveBlockNoPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭なし</button><button onClick={() => setMode("twoShantenFiveBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴5ブロック</button><button onClick={() => setMode("twoShantenFourBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴4ブロック</button><button onClick={() => setMode("twoShantenNoPair")} style={{ padding: "12px", fontWeight: 700 }}>二向聴雀頭なし</button></section></div></main>;
+  if (ruleSet == null) {
+    return <main style={{ maxWidth: 920, margin: "8px auto", padding: "0 8px", color: "#f5f5f5", fontFamily: "sans-serif" }}><h1 style={{ fontSize: 22 }}>麻雀 牌効率ゲーム</h1><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>ルール選択</h2><button onClick={() => setRuleSet("yonma")} style={{ padding: "12px", fontWeight: 700 }}>四麻</button><button onClick={() => setRuleSet("sanma")} style={{ padding: "12px", fontWeight: 700 }}>三麻</button></section></main>;
   }
 
-  return <GameScreen mode={mode} onBackToMenu={() => setMode(null)} />;
+  if (mode == null) {
+    return <main style={{ maxWidth: 920, margin: "8px auto", padding: "0 8px", color: "#f5f5f5", fontFamily: "sans-serif" }}><h1 style={{ fontSize: 22 }}>麻雀 牌効率ゲーム</h1><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}><h2 style={{ fontSize: 18, color: "#bbe7d5" }}>{ruleSetLabel(ruleSet)} モード選択</h2><button onClick={() => setRuleSet(null)} style={{ padding: "8px 10px", fontWeight: 700 }}>ルール選択へ戻る</button></div><div style={{ display: "grid", gap: 12 }}><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>通常</h2><button onClick={() => setMode("random")} style={{ padding: "12px", fontWeight: 700 }}>通常配牌モード</button><button onClick={() => setMode("twoShanten")} style={{ padding: "12px", fontWeight: 700 }}>二向聴チャレンジ</button></section><section style={{ display: "grid", gap: 8, background: "#00552e", borderRadius: 8, padding: 10 }}><h2 style={{ margin: 0, fontSize: 16, color: "#bbe7d5" }}>上級</h2><button onClick={() => setMode("fiveBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭あり</button><button onClick={() => setMode("fourBlockWithPair")} style={{ padding: "12px", fontWeight: 700 }}>4ブロック雀頭あり</button><button onClick={() => setMode("fiveBlockNoPair")} style={{ padding: "12px", fontWeight: 700 }}>5ブロック雀頭なし</button><button onClick={() => setMode("twoShantenFiveBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴5ブロック</button><button onClick={() => setMode("twoShantenFourBlock")} style={{ padding: "12px", fontWeight: 700 }}>二向聴4ブロック</button><button onClick={() => setMode("twoShantenNoPair")} style={{ padding: "12px", fontWeight: 700 }}>二向聴雀頭なし</button></section></div></main>;
+  }
+  return <GameScreen ruleSet={ruleSet} mode={mode} onBackToMenu={() => setMode(null)} />;
 }
 
-function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => void }) {
-  const [current, setCurrent] = useState<GameState>(() => createGameState(mode));
-
+function GameScreen({ ruleSet, mode, onBackToMenu }: { ruleSet: RuleSet; mode: Mode; onBackToMenu: () => void }) {
+  const [current, setCurrent] = useState<GameState>(() => createGameState(ruleSet, mode));
   const [undoStack, setUndoStack] = useState<Array<{ state: GameState; stats: Stats }>>([]);
   const [redoStack, setRedoStack] = useState<Array<{ state: GameState; stats: Stats }>>([]);
 
@@ -143,7 +146,8 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
   const shantenCLabel = previewShantenC == null ? "---" : (selectedIdx != null ? `${shantenC} → ${previewShantenC}` : String(shantenC));
 
   const resetSelections = () => { setSelectedIdx(null); setSelectedUke(null); setSelectedWaitInfo(null); };
-  const startNextGame = () => { setCurrent(createGameState(mode)); setUndoStack([]); setRedoStack([]); resetSelections(); setUndoDiffMsg(""); };
+
+  const startNextGame = () => { setCurrent(createGameState(ruleSet, mode)); setUndoStack([]); setRedoStack([]); resetSelections(); setUndoDiffMsg(""); };
 
   const calcWaitInfoForDiscard = (hand14: Tile[], discardIdx: number) => { const next13 = handWithoutIndex(hand14, discardIdx).sort(sortTiles); const waits: Tile[] = []; for (let t = 0; t < 34; t++) if (isWinningHand([...next13, t])) waits.push(t); if (waits.length === 0) return null; const counts = Array(34).fill(0); for (const t of next13) counts[t]++; let total = 0; for (const t of waits) total += Math.max(0, 4 - counts[t]); return { labels: waits.map((t) => TILE_LABELS[t]), total }; };
 
@@ -210,7 +214,7 @@ function GameScreen({ mode, onBackToMenu }: { mode: Mode; onBackToMenu: () => vo
     setUndoStack((u) => [...u, { state: current, stats }]); setRedoStack([]); setCurrent(nextState); setUndoDiffMsg(""); resetSelections();
   };
 
-  return <main style={{ maxWidth: 920, margin: "4px auto", fontFamily: "sans-serif", padding: "0 6px", color: "#f5f5f5", minHeight: "100svh", height: "100svh", paddingBottom: "env(safe-area-inset-bottom)", display: "grid", gridTemplateRows: "auto auto auto auto auto", gap: 3, overflow: "hidden" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><h1 style={{ marginBottom: 0, fontSize: isDesktop ? 22 : isMini ? 14 : 16 }}>麻雀 牌効率ゲーム（{modeLabel(mode)}）</h1><div style={{ display: "flex", gap: 6 }}><button onClick={onBackToMenu} style={{ padding: "4px 8px", fontSize: isDesktop ? 14 : 11 }}>Menu</button><button onClick={startNextGame} style={{ padding: isDesktop ? "6px 10px" : "4px 8px", fontSize: isDesktop ? 14 : 11 }}>New Game</button></div></div><div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, alignItems: "start", minHeight: isDesktop ? 120 : isMini ? 68 : 78 }}><River river={river} fixedHeight={isDesktop ? 180 : isMini ? 62 : 74} compact desktop={isDesktop} /><div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: isMini ? 8 : 10 }}><button onClick={onUndo} disabled={undoStack.length === 0} style={{ padding: "4px 8px", minWidth: isDesktop ? 74 : isMini ? 50 : 56, fontSize: isDesktop ? 14 : isMini ? 10 : 11 }}>Undo</button><button onClick={onRedo} disabled={redoStack.length === 0} style={{ padding: "4px 8px", minWidth: isDesktop ? 74 : isMini ? 50 : 56, fontSize: isDesktop ? 14 : isMini ? 10 : 11 }}>Redo</button><span style={{ color: "#bbe7d5", width: isDesktop ? 160 : isMini ? 84 : 96, fontSize: isDesktop ? 12 : isMini ? 8 : 9, lineHeight: 1.2 }}>{undoDiffMsg}</span></div></div><div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 2, minHeight: isDesktop ? 66 : isMini ? 44 : 48 }}>{fullHand.slice(0, 13).map((t, i) => <button key={`h-${t}-${i}`} onClick={() => onTileClick(i)} style={{ width: isDesktop ? 44 : isMini ? 27 : 30, height: isDesktop ? 60 : isMini ? 38 : 42, padding: 0, borderRadius: 0, outline: i === selectedIdx ? "2px solid #6cc9ff" : "none", marginRight: -1, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}><MahjongTileFace tile={t} compact /></button>)}{fullHand[13] != null && <button key={`d-${fullHand[13]}`} onClick={() => onTileClick(13)} style={{ width: isDesktop ? 44 : isMini ? 27 : 30, height: isDesktop ? 60 : isMini ? 38 : 42, padding: 0, borderRadius: 0, outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none", marginLeft: isDesktop ? 14 : isMini ? 6 : 8, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}><MahjongTileFace tile={fullHand[13]} compact /></button>}</div><div style={{ padding: isDesktop ? 8 : isMini ? 3 : 4, borderRadius: 8, background: "#00552e", fontSize: isDesktop ? 14 : isMini ? 8 : 9, minHeight: isDesktop ? 108 : isMini ? 60 : 70, overflow: "hidden" }}>{resultMsg ? <div style={{ fontWeight: 700, color: "#ffe082", fontSize: isDesktop ? 22 : isMini ? 12 : 14 }}>{resultMsg}</div> : null}<div style={{ minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div><div style={{ minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke ? `メンツ手 受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚${isMentsuShantenBack ? "（シャンテン戻し）" : ""}` : ""}</div><div style={{ minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke ? `七対子 受け入れ: ${selectedUke.chiitoiKinds}種 ${selectedUke.chiitoiCount}枚` : ""}</div><div style={{ color: "#bbe7d5", minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke && selectedIdx != null ? (selectedWaitInfo ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）` : "同じ牌をもう一度クリックで打牌確定") : ""}</div><div style={{ color: "#ffe082", minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{lastReview ? `直前打牌評価: ${TILE_LABELS[lastReview.discard]} / ${lastReview.mentsuKinds}種${lastReview.mentsuCount}枚 / Top3 ${lastReview.top3.map((x, i) => `${i + 1}位 ${TILE_LABELS[x.tile]}（${x.mCount}枚）`).join(" / ")}` : ""}</div></div><section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0,1fr))", gap: isDesktop ? 6 : isMini ? 2 : 3 }}><Stat compact={isMini} large={isDesktop} label="メンツ手" value={selectedIdx != null ? `${shantenM} → ${previewShantenM}` : String(shantenM)} /><Stat compact={isMini} large={isDesktop} label="七対子" value={shantenCLabel} /><Stat compact={isMini} large={isDesktop} label="巡目" value={String(turn)} /><Stat compact={isMini} large={isDesktop} label="良打率" value={`${goodRate}%`} /><Stat compact={isMini} large={isDesktop} label="勝利/総数" value={`${stats.wins}/${stats.totalGames}`} /></section></main>;
+  return <main style={{ maxWidth: 920, margin: "4px auto", fontFamily: "sans-serif", padding: "0 6px", color: "#f5f5f5", minHeight: "100svh", height: "100svh", paddingBottom: "env(safe-area-inset-bottom)", display: "grid", gridTemplateRows: "auto auto auto auto auto", gap: 3, overflow: "hidden" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><h1 style={{ marginBottom: 0, fontSize: isDesktop ? 22 : isMini ? 14 : 16 }}>麻雀 牌効率ゲーム（{ruleSetLabel(ruleSet)} / {modeLabel(mode)}）</h1><div style={{ display: "flex", gap: 6 }}><button onClick={onBackToMenu} style={{ padding: "4px 8px", fontSize: isDesktop ? 14 : 11 }}>Menu</button><button onClick={startNextGame} style={{ padding: isDesktop ? "6px 10px" : "4px 8px", fontSize: isDesktop ? 14 : 11 }}>New Game</button></div></div><div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, alignItems: "start", minHeight: isDesktop ? 120 : isMini ? 68 : 78 }}><River river={river} fixedHeight={isDesktop ? 180 : isMini ? 62 : 74} compact desktop={isDesktop} /><div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: isMini ? 8 : 10 }}><button onClick={onUndo} disabled={undoStack.length === 0} style={{ padding: "4px 8px", minWidth: isDesktop ? 74 : isMini ? 50 : 56, fontSize: isDesktop ? 14 : isMini ? 10 : 11 }}>Undo</button><button onClick={onRedo} disabled={redoStack.length === 0} style={{ padding: "4px 8px", minWidth: isDesktop ? 74 : isMini ? 50 : 56, fontSize: isDesktop ? 14 : isMini ? 10 : 11 }}>Redo</button><span style={{ color: "#bbe7d5", width: isDesktop ? 160 : isMini ? 84 : 96, fontSize: isDesktop ? 12 : isMini ? 8 : 9, lineHeight: 1.2 }}>{undoDiffMsg}</span></div></div><div style={{ display: "flex", alignItems: "center", overflowX: "auto", paddingBottom: 2, minHeight: isDesktop ? 66 : isMini ? 44 : 48 }}>{fullHand.slice(0, 13).map((t, i) => <button key={`h-${t}-${i}`} onClick={() => onTileClick(i)} style={{ width: isDesktop ? 44 : isMini ? 27 : 30, height: isDesktop ? 60 : isMini ? 38 : 42, padding: 0, borderRadius: 0, outline: i === selectedIdx ? "2px solid #6cc9ff" : "none", marginRight: -1, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}><MahjongTileFace tile={t} compact /></button>)}{fullHand[13] != null && <button key={`d-${fullHand[13]}`} onClick={() => onTileClick(13)} style={{ width: isDesktop ? 44 : isMini ? 27 : 30, height: isDesktop ? 60 : isMini ? 38 : 42, padding: 0, borderRadius: 0, outline: selectedIdx === 13 ? "2px solid #6cc9ff" : "none", marginLeft: isDesktop ? 14 : isMini ? 6 : 8, background: "#13523d", cursor: gameEnded ? "default" : "pointer", flex: "0 0 auto" }}><MahjongTileFace tile={fullHand[13]} compact /></button>}</div><div style={{ padding: isDesktop ? 8 : isMini ? 3 : 4, borderRadius: 8, background: "#00552e", fontSize: isDesktop ? 14 : isMini ? 8 : 9, minHeight: isDesktop ? 108 : isMini ? 60 : 70, overflow: "hidden" }}>{resultMsg ? <div style={{ fontWeight: 700, color: "#ffe082", fontSize: isDesktop ? 22 : isMini ? 12 : 14 }}>{resultMsg}</div> : null}<div style={{ minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke && selectedIdx != null ? `仮選択牌: ${TILE_LABELS[fullHand[selectedIdx]]}` : ""}</div><div style={{ minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke ? `メンツ手 受け入れ: ${selectedUke.mentsuKinds}種 ${selectedUke.mentsuCount}枚${isMentsuShantenBack ? "（シャンテン戻し）" : ""}` : ""}</div><div style={{ minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke ? `七対子 受け入れ: ${selectedUke.chiitoiKinds}種 ${selectedUke.chiitoiCount}枚` : ""}</div><div style={{ color: "#bbe7d5", minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{selectedUke && selectedIdx != null ? (selectedWaitInfo ? `聴牌・待ち: ${selectedWaitInfo.labels.join(" ")}（${selectedWaitInfo.total}枚）` : "同じ牌をもう一度クリックで打牌確定") : ""}</div><div style={{ color: "#ffe082", minHeight: isDesktop ? 20 : isMini ? 10 : 12 }}>{lastReview ? `直前打牌評価: ${TILE_LABELS[lastReview.discard]} / ${lastReview.mentsuKinds}種${lastReview.mentsuCount}枚 / Top3 ${lastReview.top3.map((x, i) => `${i + 1}位 ${TILE_LABELS[x.tile]}（${x.mCount}枚）`).join(" / ")}` : ""}</div></div><section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0,1fr))", gap: isDesktop ? 6 : isMini ? 2 : 3 }}><Stat compact={isMini} large={isDesktop} label="メンツ手" value={selectedIdx != null ? `${shantenM} → ${previewShantenM}` : String(shantenM)} /><Stat compact={isMini} large={isDesktop} label="七対子" value={shantenCLabel} /><Stat compact={isMini} large={isDesktop} label="巡目" value={String(turn)} /><Stat compact={isMini} large={isDesktop} label="良打率" value={`${goodRate}%`} /><Stat compact={isMini} large={isDesktop} label="勝利/総数" value={`${stats.wins}/${stats.totalGames}`} /></section></main>;
 }
 
 
