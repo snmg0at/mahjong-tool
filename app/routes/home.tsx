@@ -866,7 +866,7 @@ type SetupLineItem = {
 const SETUP_SCREEN_STYLES = `
   .setup-screen {
     width: min(100%, 920px);
-    min-height: 100svh;
+    min-height: var(--app-height, 100svh);
     margin: 0 auto;
     padding: max(14px, env(safe-area-inset-top))
       max(18px, env(safe-area-inset-right))
@@ -1154,9 +1154,10 @@ const SETUP_SCREEN_STYLES = `
     }
   }
 
-  @media (orientation: landscape) and (max-height: 500px) {
+  @media (orientation: landscape) and (max-height: 500px),
+    (orientation: portrait) and (max-width: 1024px) {
     .setup-screen {
-      height: 100svh;
+      height: var(--app-height, 100svh);
       padding-top: max(7px, env(safe-area-inset-top));
       padding-bottom: max(10px, env(safe-area-inset-bottom));
       overflow-y: auto;
@@ -1629,12 +1630,19 @@ function GameScreen({
     sequence: 0,
   });
 
-  const isMini = typeof window !== "undefined" && window.innerHeight <= 740;
+  const isPortraitDevice =
+    typeof window !== "undefined" &&
+    window.innerWidth < window.innerHeight &&
+    window.innerWidth <= 1024;
+  const isMini =
+    typeof window !== "undefined" &&
+    (isPortraitDevice || window.innerHeight <= 740);
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
   const isLandscapeMobile =
     typeof window !== "undefined" &&
-    window.innerWidth > window.innerHeight &&
-    window.innerWidth < 1024;
+    (window.innerWidth > window.innerHeight ||
+      window.innerWidth >= 600 ||
+      isPortraitDevice);
 
   const {
     wall,
@@ -1961,8 +1969,8 @@ function GameScreen({
             ? "max(10px, env(safe-area-inset-right))"
             : undefined,
           color: "#f5f5f5",
-          minHeight: "100svh",
-          height: "100svh",
+          minHeight: "var(--app-height, 100svh)",
+          height: "var(--app-height, 100svh)",
           paddingBottom: isLandscapeMobile
             ? "max(env(safe-area-inset-bottom), 18px)"
             : "env(safe-area-inset-bottom)",
@@ -2102,7 +2110,7 @@ function GameScreen({
             paddingRight: isLandscapeMobile ? 108 : undefined,
             boxSizing: "border-box",
             minHeight: isDesktop
-              ? 66
+              ? 80
               : isLandscapeMobile
                 ? 80
                 : isMini
@@ -2118,14 +2126,14 @@ function GameScreen({
               onClick={() => onTileClick(i)}
               style={{
                 width: isDesktop
-                  ? 44
+                  ? 58
                   : isLandscapeMobile
-                    ? "clamp(34px, calc((100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 78px) / 14), 58px)"
+                    ? "clamp(34px, calc((var(--app-width, 100vw) - env(safe-area-inset-left) - env(safe-area-inset-right) - 78px) / 14), 58px)"
                     : isMini
                       ? 27
                       : 30,
                 height: isDesktop
-                  ? 60
+                  ? "auto"
                   : isLandscapeMobile
                     ? "auto"
                     : isMini
@@ -2157,14 +2165,14 @@ function GameScreen({
               onClick={() => onTileClick(13)}
               style={{
                 width: isDesktop
-                  ? 44
+                  ? 58
                   : isLandscapeMobile
-                    ? "clamp(34px, calc((100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 78px) / 14), 58px)"
+                    ? "clamp(34px, calc((var(--app-width, 100vw) - env(safe-area-inset-left) - env(safe-area-inset-right) - 78px) / 14), 58px)"
                     : isMini
                       ? 27
                       : 30,
                 height: isDesktop
-                  ? 60
+                  ? "auto"
                   : isLandscapeMobile
                     ? "auto"
                     : isMini
