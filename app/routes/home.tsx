@@ -1155,7 +1155,7 @@ const SETUP_SCREEN_STYLES = `
   }
 
   @media (orientation: landscape) and (max-height: 500px),
-    (orientation: portrait) and (max-width: 600px) {
+    (orientation: portrait) and (max-width: 1024px) {
     .setup-screen {
       height: var(--app-height, 100svh);
       padding-top: max(7px, env(safe-area-inset-top));
@@ -1630,18 +1630,19 @@ function GameScreen({
     sequence: 0,
   });
 
-  const isPortraitPhone =
+  const isPortraitDevice =
     typeof window !== "undefined" &&
     window.innerWidth < window.innerHeight &&
-    window.innerWidth <= 600;
+    window.innerWidth <= 1024;
   const isMini =
     typeof window !== "undefined" &&
-    (isPortraitPhone || window.innerHeight <= 740);
+    (isPortraitDevice || window.innerHeight <= 740);
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
   const isLandscapeMobile =
     typeof window !== "undefined" &&
-    ((window.innerWidth > window.innerHeight && window.innerWidth < 1024) ||
-      isPortraitPhone);
+    (window.innerWidth > window.innerHeight ||
+      window.innerWidth >= 600 ||
+      isPortraitDevice);
 
   const {
     wall,
@@ -2109,7 +2110,7 @@ function GameScreen({
             paddingRight: isLandscapeMobile ? 108 : undefined,
             boxSizing: "border-box",
             minHeight: isDesktop
-              ? 66
+              ? 80
               : isLandscapeMobile
                 ? 80
                 : isMini
@@ -2125,14 +2126,14 @@ function GameScreen({
               onClick={() => onTileClick(i)}
               style={{
                 width: isDesktop
-                  ? 44
+                  ? 58
                   : isLandscapeMobile
                     ? "clamp(34px, calc((var(--app-width, 100vw) - env(safe-area-inset-left) - env(safe-area-inset-right) - 78px) / 14), 58px)"
                     : isMini
                       ? 27
                       : 30,
                 height: isDesktop
-                  ? 60
+                  ? "auto"
                   : isLandscapeMobile
                     ? "auto"
                     : isMini
@@ -2164,14 +2165,14 @@ function GameScreen({
               onClick={() => onTileClick(13)}
               style={{
                 width: isDesktop
-                  ? 44
+                  ? 58
                   : isLandscapeMobile
                     ? "clamp(34px, calc((var(--app-width, 100vw) - env(safe-area-inset-left) - env(safe-area-inset-right) - 78px) / 14), 58px)"
                     : isMini
                       ? 27
                       : 30,
                 height: isDesktop
-                  ? 60
+                  ? "auto"
                   : isLandscapeMobile
                     ? "auto"
                     : isMini

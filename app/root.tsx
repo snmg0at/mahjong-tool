@@ -25,7 +25,7 @@ export default function App() {
             min-height: var(--app-height);
           }
 
-          @media (orientation: portrait) and (max-width: 600px) {
+          @media (orientation: portrait) and (max-width: 1024px) {
             html,
             body {
               height: 100%;
