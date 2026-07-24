@@ -26,6 +26,7 @@ type GoatReaction = "idle" | "inspect" | "encourage" | "celebrate";
 type Mode =
   | "random"
   | "twoShanten"
+  | "threeShanten"
   | "fiveBlockWithPair"
   | "fourBlockWithPair"
   | "fiveBlockNoPair"
@@ -47,6 +48,7 @@ const modeLabel = (mode: Mode, language: Language): string => {
   const labels: Record<Mode, [string, string]> = {
     random: ["Standard Deal", "通常配牌モード"],
     twoShanten: ["Two-away (二向聴) Challenge", "二向聴チャレンジ"],
+    threeShanten: ["Three-away (三向聴) Challenge", "三向聴チャレンジ"],
     fiveBlockWithPair: ["5 Blocks + Pair (雀頭)", "5ブロック雀頭あり"],
     fourBlockWithPair: ["4 Blocks + Pair (雀頭)", "4ブロック雀頭あり"],
     fiveBlockNoPair: ["5 Blocks, No Pair (雀頭なし)", "5ブロック雀頭なし"],
@@ -1371,6 +1373,7 @@ function createGameState(ruleSet: RuleSet, mode: Mode): GameState {
       shantenChiitoi(fullHand),
     );
     if (mode === "twoShanten") return minShanten === 2;
+    if (mode === "threeShanten") return minShanten === 3;
     if (mode === "fiveBlockWithPair") return m.blocks === 5 && m.hasPair;
     // 合意仕様: 「4ブロック雀頭あり」はシャンテン固定せず、形条件のみで開始する
     if (mode === "fourBlockWithPair") return m.blocks === 4 && m.hasPair;
@@ -1530,10 +1533,21 @@ export default function Home() {
                   language === "en"
                     ? "Medium · Two-away (二向聴)"
                     : "中級 · 二向聴チャレンジ",
-                active: difficulty === "medium",
+                active: difficulty === "medium" && mode === "twoShanten",
                 onSelect: () => {
                   setDifficulty("medium");
                   setMode("twoShanten");
+                },
+              },
+              {
+                label:
+                  language === "en"
+                    ? "Medium · Three-away (三向聴)"
+                    : "中級 · 三向聴チャレンジ",
+                active: difficulty === "medium" && mode === "threeShanten",
+                onSelect: () => {
+                  setDifficulty("medium");
+                  setMode("threeShanten");
                 },
               },
               {
