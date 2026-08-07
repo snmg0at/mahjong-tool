@@ -1,7 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { calcUkeireForDiscard, classifyMentsuStructure, evaluatePathWeight, generateFiveBlockNoPairHand, generateSanmaFiveBlockNoPairHand, isSanmaTile, makeSanmaWall, makeWall, toCounts, shantenChiitoi, shantenMentsu } from "./mahjong.ts";
+import {
+  calcUkeireForDiscard,
+  classifyMentsuStructure,
+  evaluatePathWeight,
+  generateFiveBlockNoPairHand,
+  generateSanmaFiveBlockNoPairHand,
+  isSanmaTile,
+  makeSanmaWall,
+  makeWall,
+  selectTopDiscardCandidates,
+  toCounts,
+  shantenChiitoi,
+  shantenMentsu,
+  type DiscardReviewCandidate,
+} from "./mahjong.ts";
 
 
 test("makeWall creates 136 tiles", () => {
@@ -24,6 +38,57 @@ test("ukeire returns separated mentsu/chiitoi counts", () => {
   const hand = [0,0,1,1,2,2,9,10,11,18,19,20,27,28];
   const res = calcUkeireForDiscard(hand, 13);
   assert.ok(res.mentsuKinds >= 0 && res.chiitoiKinds >= 0);
+});
+
+const reviewCandidate = (
+  tile: number,
+  score: number,
+  mCount = 20,
+  mKinds = 6,
+): DiscardReviewCandidate => ({
+  tile,
+  score,
+  mCount,
+  mKinds,
+  nextShanten: 1,
+});
+
+test("top discard recommendations contain distinct tile types", () => {
+  const top = selectTopDiscardCandidates([
+    reviewCandidate(27, 100),
+    reviewCandidate(27, 100),
+    reviewCandidate(27, 100),
+    reviewCandidate(28, 90),
+    reviewCandidate(29, 80),
+    reviewCandidate(30, 70),
+  ]);
+
+  assert.deepEqual(top.map(({ tile }) => tile), [27, 28, 29]);
+  assert.equal(new Set(top.map(({ tile }) => tile)).size, 3);
+});
+
+test("honors win a tie without outranking a better score", () => {
+  const top = selectTopDiscardCandidates([
+    reviewCandidate(0, 200, 30),
+    reviewCandidate(1, 100, 20),
+    reviewCandidate(27, 100, 20),
+  ]);
+
+  assert.deepEqual(top.map(({ tile }) => tile), [0, 27, 1]);
+});
+
+test("discard recommendation ties are stable and preserve kinds and counts", () => {
+  const top = selectTopDiscardCandidates([
+    reviewCandidate(5, 100, 24, 7),
+    reviewCandidate(3, 100, 24, 7),
+    reviewCandidate(4, 100, 24, 8),
+  ]);
+
+  assert.deepEqual(top.map(({ tile }) => tile), [4, 3, 5]);
+  assert.deepEqual(
+    top.map(({ mKinds, mCount }) => [mKinds, mCount]),
+    [[8, 24], [7, 24], [7, 24]],
+  );
 });
 
 test("weight balances when four pairs exist", () => {
@@ -161,4 +226,3 @@ test("sanma fiveBlockNoPair generator creates visible separated five blocks", ()
     assert.ok((pinCount === 4 && souCount === 6) || (pinCount === 6 && souCount === 4));
   }
 });
-

@@ -11,7 +11,9 @@ import {
   shantenChiitoi,
   shantenMentsu,
   sortTiles,
+  selectTopDiscardCandidates,
   TILE_LABELS,
+  type DiscardReviewCandidate,
   tileImagePath,
   toCounts,
   type Tile,
@@ -67,13 +69,7 @@ type Stats = {
   goodMoves: number;
   totalMoves: number;
 };
-type ReviewItem = {
-  tile: Tile;
-  mKinds: number;
-  mCount: number;
-  nextShanten: number;
-  score: number;
-};
+type ReviewItem = DiscardReviewCandidate;
 type LastDiscardReview = {
   discard: Tile;
   mentsuKinds: number;
@@ -401,11 +397,123 @@ const GOAT_COACH_STYLES = `
     isolation: isolate;
     min-width: 0;
     align-self: center;
-    padding: 8px 13px 6px 11px;
+    padding: 10px 14px 8px 12px;
     backdrop-filter: blur(16px) saturate(115%);
     -webkit-backdrop-filter: blur(16px) saturate(115%);
     box-sizing: border-box;
     pointer-events: none;
+  }
+
+  .analysis-result {
+    width: fit-content;
+    padding: 3px 10px;
+    border: 1px solid rgba(255, 224, 130, 0.62);
+    border-radius: 999px;
+    background: rgba(255, 224, 130, 0.14);
+    color: #ffe082;
+    font-size: 13px;
+    font-weight: 850;
+    line-height: 1.15;
+    box-shadow: 0 0 10px rgba(255, 224, 130, 0.12);
+  }
+
+  .analysis-result--draw {
+    border-color: rgba(187, 231, 213, 0.58);
+    background: rgba(187, 231, 213, 0.12);
+    color: #e7fff6;
+  }
+
+  .discard-review {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    gap: 4px 6px;
+    min-width: 0;
+    color: #f8f5e8;
+  }
+
+  .discard-review__last,
+  .discard-review__recommendations {
+    min-width: 0;
+    padding: 4px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 7px;
+    background: rgba(0, 45, 28, 0.28);
+  }
+
+  .discard-review__recommendations {
+    border-color: rgba(255, 224, 130, 0.42);
+  }
+
+  .discard-review__heading {
+    margin-bottom: 2px;
+    color: #bbe7d5;
+    font-size: 0.9em;
+    font-weight: 750;
+    line-height: 1;
+  }
+
+  .discard-review__recommendations .discard-review__heading {
+    color: #ffe082;
+  }
+
+  .discard-review__last-value {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    white-space: nowrap;
+    font-weight: 750;
+  }
+
+  .discard-review__top3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .discard-review__item {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    padding: 2px 4px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
+  }
+
+  .discard-review__item--first {
+    border-color: rgba(255, 224, 130, 0.55);
+    background: rgba(255, 224, 130, 0.12);
+  }
+
+  .discard-review__rank {
+    color: #ffe082;
+    font-size: 0.86em;
+    font-weight: 800;
+  }
+
+  @media (max-width: 650px) {
+    .discard-review {
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 3px;
+    }
+
+    .discard-review__last,
+    .discard-review__recommendations {
+      padding: 3px 4px;
+    }
+
+    .discard-review__top3 {
+      grid-template-columns: 1fr;
+      gap: 1px;
+    }
+
+    .discard-review__item {
+      justify-content: flex-start;
+      padding: 1px 3px;
+    }
   }
 
   .goat-coach__speech-shape {
@@ -777,7 +885,10 @@ function CompactAnalysis({
         </div>
       ) : null}
       {resultMsg ? (
-        <div style={{ fontWeight: 700 }}>
+        <div
+          className={`analysis-result${resultMsg === "流局" ? " analysis-result--draw" : ""}`}
+          role="status"
+        >
           {english
             ? resultMsg === "聴牌"
               ? "Ready hand 聴牌"
@@ -834,26 +945,64 @@ function CompactAnalysis({
         </div>
       ) : null}
       {lastReview ? (
-        <div
-          style={{
-            paddingTop: 3,
-            borderTop: "1px solid rgba(255, 255, 255, 0.12)",
-            color: "#ffe082",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {english ? "Last 打牌" : "直前打牌"} {TILE_LABELS[lastReview.discard]}{" "}
-          · {lastReview.mentsuKinds}
-          {english ? " types" : "種"} / {lastReview.mentsuCount}
-          {english ? " tiles" : "枚"} · Top{" "}
-          {lastReview.top3
-            .map((item) => `${TILE_LABELS[item.tile]} ${item.mCount}`)
-            .join(" · ")}
-        </div>
+        <DiscardReview review={lastReview} language={language} />
       ) : null}
     </div>
+  );
+}
+
+function DiscardReview({
+  review,
+  language,
+}: {
+  review: LastDiscardReview;
+  language: Language;
+}) {
+  const english = language === "en";
+  return (
+    <section
+      className="discard-review"
+      aria-label={
+        english ? "Last discard and top recommendations" : "直前打牌と推奨Top3"
+      }
+    >
+      <div className="discard-review__last">
+        <div className="discard-review__heading">
+          {english ? "Last discard 打牌" : "直前打牌"}
+        </div>
+        <div className="discard-review__last-value">
+          <span>{TILE_LABELS[review.discard]}</span>
+          <span>
+            {review.mentsuKinds}
+            {english ? " types" : "種"}・{review.mentsuCount}
+            {english ? " tiles" : "枚"}
+          </span>
+        </div>
+      </div>
+      <div className="discard-review__recommendations">
+        <div className="discard-review__heading">
+          {english ? "Recommended Top 3" : "推奨Top3"}
+        </div>
+        <div className="discard-review__top3">
+          {review.top3.map((item, index) => (
+            <div
+              className={`discard-review__item${index === 0 ? " discard-review__item--first" : ""}`}
+              key={item.tile}
+            >
+              <span className="discard-review__rank">
+                {english ? `#${index + 1}` : `${index + 1}位`}
+              </span>
+              <strong>{TILE_LABELS[item.tile]}</strong>
+              <span>
+                {item.mKinds}
+                {english ? " types" : "種"}・{item.mCount}
+                {english ? " tiles" : "枚"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1821,12 +1970,7 @@ function GameScreen({
       drawTile: null,
     };
 
-    const top3 = [...all]
-      .sort(
-        (a, b) =>
-          b.score - a.score || b.mCount - a.mCount || b.mKinds - a.mKinds,
-      )
-      .slice(0, 3);
+    const top3 = selectTopDiscardCandidates(all);
     const cur = calcUkeireForDiscard(fullHand, idx);
     nextState.lastReview = {
       discard,
@@ -2320,11 +2464,11 @@ function GameScreen({
             <>
               {resultMsg ? (
                 <div
-                  style={{
-                    fontWeight: 700,
-                    color: "#ffe082",
-                    fontSize: isDesktop ? 22 : isMini ? 12 : 14,
-                  }}
+                  className={`analysis-result${
+                    resultMsg === "流局" ? " analysis-result--draw" : ""
+                  }`}
+                  role="status"
+                  style={{ fontSize: isDesktop ? 22 : isMini ? 13 : 15 }}
                 >
                   {english
                     ? resultMsg === "聴牌"
@@ -2370,18 +2514,9 @@ function GameScreen({
                       : "同じ牌をもう一度クリックで打牌確定"
                   : ""}
               </div>
-              <div
-                style={{
-                  color: "#ffe082",
-                  minHeight: isDesktop ? 20 : isMini ? 10 : 12,
-                }}
-              >
-                {lastReview
-                  ? english
-                    ? `Last discard (打牌) review: ${TILE_LABELS[lastReview.discard]} / ${lastReview.mentsuKinds} types, ${lastReview.mentsuCount} tiles / Top 3: ${lastReview.top3.map((x, i) => `${i + 1}. ${TILE_LABELS[x.tile]} (${x.mCount})`).join(" / ")}`
-                    : `直前打牌評価: ${TILE_LABELS[lastReview.discard]} / ${lastReview.mentsuKinds}種${lastReview.mentsuCount}枚 / Top3 ${lastReview.top3.map((x, i) => `${i + 1}位 ${TILE_LABELS[x.tile]}（${x.mCount}枚）`).join(" / ")}`
-                  : ""}
-              </div>
+              {lastReview ? (
+                <DiscardReview review={lastReview} language={language} />
+              ) : null}
             </>
           )}
         </div>
