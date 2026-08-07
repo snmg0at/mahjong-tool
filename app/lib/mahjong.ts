@@ -7,6 +7,42 @@ export type UkeireResult = {
   chiitoiCount: number;
 };
 
+export type DiscardReviewCandidate = {
+  tile: Tile;
+  mKinds: number;
+  mCount: number;
+  nextShanten: number;
+  score: number;
+};
+
+/** Returns up to three distinct discard types in a stable recommendation order. */
+export function selectTopDiscardCandidates(
+  candidates: DiscardReviewCandidate[],
+): DiscardReviewCandidate[] {
+  const byTile = new Map<Tile, DiscardReviewCandidate>();
+  for (const candidate of candidates) {
+    const existing = byTile.get(candidate.tile);
+    if (!existing || compareDiscardCandidates(candidate, existing) < 0) {
+      byTile.set(candidate.tile, candidate);
+    }
+  }
+
+  return [...byTile.values()].sort(compareDiscardCandidates).slice(0, 3);
+}
+
+function compareDiscardCandidates(
+  a: DiscardReviewCandidate,
+  b: DiscardReviewCandidate,
+): number {
+  return (
+    b.score - a.score ||
+    b.mCount - a.mCount ||
+    Number(b.tile >= 27) - Number(a.tile >= 27) ||
+    b.mKinds - a.mKinds ||
+    a.tile - b.tile
+  );
+}
+
 export const TILE_LABELS = [
   "1m", "2m", "3m", "4m", "5m", "6m", "7m", "8m", "9m",
   "1p", "2p", "3p", "4p", "5p", "6p", "7p", "8p", "9p",
