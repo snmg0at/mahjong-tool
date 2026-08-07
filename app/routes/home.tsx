@@ -21,6 +21,8 @@ import {
 } from "../lib/mahjong";
 
 const MAX_TURNS = 18;
+// Three compact 24px discard rows, two 2px row gaps, and 3px vertical padding.
+const LANDSCAPE_RIVER_HEIGHT = 82;
 
 type RuleSet = "yonma" | "sanma";
 type Difficulty = "easy" | "medium" | "expert";
@@ -2135,7 +2137,7 @@ function GameScreen({
           boxSizing: "border-box",
           display: "grid",
           gridTemplateRows: isLandscapeMobile
-            ? "auto 46px auto minmax(76px, 1fr) 40px"
+            ? `auto ${LANDSCAPE_RIVER_HEIGHT}px auto minmax(76px, 1fr) 40px`
             : "auto auto auto auto auto",
           gap: isLandscapeMobile ? 2 : 3,
           overflow: "hidden",
@@ -2212,7 +2214,7 @@ function GameScreen({
             minHeight: isDesktop
               ? 120
               : isLandscapeMobile
-                ? 46
+                ? LANDSCAPE_RIVER_HEIGHT
                 : isMini
                   ? 68
                   : 78,
@@ -2222,7 +2224,13 @@ function GameScreen({
             river={river}
             language={language}
             fixedHeight={
-              isDesktop ? 180 : isLandscapeMobile ? 42 : isMini ? 62 : 74
+              isDesktop
+                ? 180
+                : isLandscapeMobile
+                  ? LANDSCAPE_RIVER_HEIGHT
+                  : isMini
+                    ? 62
+                    : 74
             }
             compact
             desktop={isDesktop}
@@ -2712,6 +2720,7 @@ function River({
         borderRadius: 8,
         padding: compact ? 3 : 10,
         height: fixedHeight ?? 120,
+        boxSizing: "border-box",
         marginBottom: 0,
         background: "#00552e",
         display: "flex",
@@ -2733,7 +2742,8 @@ function River({
             style={{
               display: "flex",
               gap: compact ? 2 : 8,
-              marginBottom: compact ? 2 : 6,
+              marginBottom:
+                rIdx === rows.length - 1 ? 0 : compact ? 2 : 6,
               justifyContent: "flex-start",
             }}
           >
